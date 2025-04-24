@@ -1,8 +1,18 @@
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
     id("dev.flutter.flutter-gradle-plugin")
     id("com.google.gms.google-services")
+}
+
+val keystorePropertiesFile = rootProject.file("key.properties")
+val keystoreProperties = Properties()
+
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
 
 android {
@@ -13,8 +23,8 @@ android {
     defaultConfig {
         applicationId = "com.aasoft.drydays"
         minSdk = 23
-        targetSdk = 33
-        versionCode = flutter.versionCode
+        targetSdk = 34
+        versionCode = 3
         versionName = flutter.versionName
     }
 
@@ -33,9 +43,30 @@ android {
         disable.add("InvalidPackage")
     }
 
+    signingConfigs {
+        create("release") {
+            val hasAllKeys = keystoreProperties.containsKey("storeFile") &&
+                    keystoreProperties.containsKey("storePassword") &&
+                    keystoreProperties.containsKey("keyAlias") &&
+                    keystoreProperties.containsKey("keyPassword")
+
+            if (hasAllKeys) {
+                storeFile = file(keystoreProperties["storeFile"] as String)
+                storePassword = keystoreProperties["storePassword"] as String
+                keyAlias = keystoreProperties["keyAlias"] as String
+                keyPassword = keystoreProperties["keyPassword"] as String
+            } else {
+                throw GradleException("Eksik imzalama bilgisi: key.properties dosyasındaki storeFile/storePassword/keyAlias/keyPassword kontrol edilmeli.")
+            }
+        }
+    }
+
     buildTypes {
         getByName("release") {
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("release")
+            isMinifyEnabled = false
+            isShrinkResources = false
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
 }

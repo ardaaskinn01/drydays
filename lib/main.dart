@@ -131,15 +131,29 @@ void onStart(ServiceInstance service) async {
 
   FlutterBluePlus.scanResults.listen((results) async {
     String status = "Tarama yapılıyor...";
+    bool alarmingDeviceStillExists = false;
 
     for (var result in results) {
-      if (result.device.name.toLowerCase().contains("band") &&
-          result.device.name.endsWith("4")) {
-        status = "Cihaz bulundu: ${result.device.name}";
-        break;
+      final name = result.device.name;
+      final manufacturerData = result.advertisementData.manufacturerData;
+
+      if (name.toLowerCase().contains("esp32")) {
+        // İsteğe bağlı: cihaz ismini statüye yazabiliriz
+        status = "ESP32 bulundu: $name";
+
+        if (manufacturerData.isNotEmpty) {
+          final rawData = manufacturerData.values.first;
+          final dataString = String.fromCharCodes(rawData);
+
+          if (dataString.contains("nem=1")) {
+            status = "Uyarı! ESP32 cihazı nem=1 gönderdi.";
+            alarmingDeviceStillExists = true;
+          }
+        }
       }
     }
 
+    // Bildirim güncelle
     if (service is AndroidServiceInstance) {
       await service.setForegroundNotificationInfo(
         title: "Bluetooth Alarm",
@@ -153,6 +167,8 @@ void onStart(ServiceInstance service) async {
       status,
       notificationDetails,
     );
+
+    // Alarm durumu kontrolü (opsiyonel olarak background alarm tetikleme de yapılabilir)
   });
 
   Timer.periodic(const Duration(seconds: 15), (timer) async {
