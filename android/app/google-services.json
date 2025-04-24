@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "65049702064",
+    "project_id": "dry-days-75a8f",
+    "storage_bucket": "dry-days-75a8f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:65049702064:android:c8750f11951e6982fb9575",
+        "android_client_info": {
+          "package_name": "com.aasoft.drydays"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC6pTnsc-_Ew_UWqL4aO4OeNpwfEBvKy9Y"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

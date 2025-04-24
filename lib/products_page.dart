@@ -6,7 +6,7 @@ class ProductsPage extends StatelessWidget {
   const ProductsPage({super.key});
 
   final String trendyolUrl =
-      'https://www.trendyol.com/drydays/yatak-islatma-idrar-alarm-cihazi-dry-days-enurezis-sesli-uyari-p-101147068?boutiqueId=61&merchantId=572701';
+      'https://www.trendyol.com/magaza/kardelen-tibbi-cihazlar-m-434131?sst=0';
 
   @override
   Widget build(BuildContext context) {
@@ -114,7 +114,7 @@ class ProductsPage extends StatelessWidget {
 
   void _launchURL() async {
     final Uri url = Uri.parse(
-        'https://www.trendyol.com/drydays/yatak-islatma-idrar-alarm-cihazi-dry-days-enurezis-sesli-uyari-p-101147068?boutiqueId=61&merchantId=572701');
+        'https://www.trendyol.com/magaza/kardelen-tibbi-cihazlar-m-434131?sst=0');
 
     if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
       debugPrint("Link açılamadı: $url");

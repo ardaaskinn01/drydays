@@ -9,7 +9,8 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
-import 'service_handler.dart';
+
+import 'main.dart';
 
 bool isBluetoothStarted = false;
 double _alarmVolume = 0.5;
@@ -36,6 +37,7 @@ class _BluetoothPageState extends State<BluetoothPage> {
   Future<void> stopBluetooth() async {
     FlutterBluePlus.stopScan();
     _scanTimer?.cancel();
+    await WakelockPlus.disable();
     setState(() {
       isBluetoothStarted = false;
       foundDevices.clear();
@@ -43,12 +45,22 @@ class _BluetoothPageState extends State<BluetoothPage> {
   }
 
   Future<void> requestPermissions() async {
-    await [Permission.bluetoothScan, Permission.bluetoothConnect, Permission.location,
+    await [Permission.bluetoothScan, Permission.bluetoothConnect, Permission.location, Permission.notification
     ].request();
   }
 
   Future<void> startBluetooth() async {
+    await initializeService();
+    // Alarm seçili mi kontrol et
+    if (_selectedAlarm == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Lütfen önce bir alarm seçiniz")),
+      );
+      return;
+    }
+
     await requestPermissions();
+
     final isOn = await FlutterBluePlus.isOn;
     if (!isOn) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -71,53 +83,45 @@ class _BluetoothPageState extends State<BluetoothPage> {
     // Sonuçları dinle
     FlutterBluePlus.scanResults.listen((results) async {
       bool alarmingDeviceStillExists = false;
-      bool deviceNameChanged = false;
 
       for (ScanResult result in results) {
         final name = result.device.name;
+        final manufacturerData = result.advertisementData.manufacturerData;
 
-        if (name.toLowerCase().contains("band") && !foundDevices.contains(name)) {
-          setState(() {
-            foundDevices.add(name);
-          });
-        }
-
-        if (name.endsWith("4") && _selectedAlarm != null) {
-          if (!_isPlaying) {
-            await playAlarm(_selectedAlarm!);
+        // ESP32 ise ve veri içeriyorsa
+        if (name.toLowerCase().contains("esp32")) {
+          // İsteğe bağlı: ESP32 isimli cihazları listeye ekleyebilirsin
+          if (!foundDevices.contains(name)) {
             setState(() {
-              _alarmingDeviceName = name;
+              foundDevices.add(name);
             });
           }
-          alarmingDeviceStillExists = true;
-        }
 
-        if (_alarmingDeviceName != null &&
-            name == _alarmingDeviceName &&
-            !name.endsWith("4")) {
-          deviceNameChanged = true;
+          // Örnek olarak "nem=1" verisi geldi mi?
+          if (manufacturerData.isNotEmpty) {
+            final rawData = manufacturerData.values.first;
+            final dataString = String.fromCharCodes(rawData);
+
+            if (dataString.contains("nem=1")) {
+              if (!_isPlaying && _selectedAlarm != null) {
+                await playAlarm(_selectedAlarm!);
+                setState(() {
+                  _alarmingDeviceName = name;
+                });
+              }
+              alarmingDeviceStillExists = true;
+            }
+          }
         }
       }
 
-      if (_isPlaying && (!alarmingDeviceStillExists || deviceNameChanged)) {
+      // Eğer alarm çalıyorsa ama artık veri yoksa durdur
+      if (_isPlaying && !alarmingDeviceStillExists) {
         await stopAlarm();
       }
     });
-
-    // Her 12 saniyede bir taramayı kontrol et ve gerekiyorsa başlat
-    _scanTimer = Timer.periodic(const Duration(seconds: 12), (timer) async {
-      bool isScanning = await FlutterBluePlus.isScanningNow;
-
-      if (!isScanning) {
-        await FlutterBluePlus.startScan(
-          timeout: const Duration(seconds: 12),
-          androidScanMode: AndroidScanMode.lowLatency,
-        );
-      } else {
-        debugPrint("Tarama zaten aktif, yeni tarama başlatılmadı.");
-      }
-    });
   }
+
 
   void startNameAnimation() {
     Timer.periodic(const Duration(milliseconds: 600), (timer) {
@@ -157,8 +161,6 @@ class _BluetoothPageState extends State<BluetoothPage> {
 
     // 🔁 Döngüyü devre dışı bırak
     await _audioPlayer.setReleaseMode(ReleaseMode.release);
-
-    await WakelockPlus.disable();
 
     setState(() {
       _isPlaying = false;
@@ -255,7 +257,11 @@ class _BluetoothPageState extends State<BluetoothPage> {
   void initState() {
     super.initState();
     loadSelectedAlarm();
-    initializeService();
+  }
+
+  void printCallback() {
+    print("Alarm tetiklendi! Uygulama uyanık.");
+
   }
 
   @override
@@ -264,61 +270,6 @@ class _BluetoothPageState extends State<BluetoothPage> {
     _audioPlayer.dispose();
     FlutterBluePlus.stopScan();
     super.dispose();
-  }
-
-  Future<void> initializeService() async {
-    final service = FlutterBackgroundService();
-
-    if (Platform.isAndroid) {
-      // Bildirim kanalını oluştur
-      const AndroidNotificationChannel channel = AndroidNotificationChannel(
-        'bluetooth_alarm',
-        'Bluetooth Alarm Servisi',
-        description: 'Bluetooth çalışıyor. Alarm hazır.',
-        importance: Importance.high,
-        playSound: true,
-        enableVibration: true,
-      );
-
-      final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
-      FlutterLocalNotificationsPlugin();
-
-      await flutterLocalNotificationsPlugin
-          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
-          ?.createNotificationChannel(channel);
-    }
-
-    await service.configure(
-      androidConfiguration: AndroidConfiguration(
-        onStart: onStart,
-        isForegroundMode: true,
-        autoStart: true,
-        notificationChannelId: 'bluetooth_alarm',
-        initialNotificationTitle: 'Bluetooth Alarm',
-        initialNotificationContent: 'Tarama aktif',
-        foregroundServiceNotificationId: 888
-      ),
-      iosConfiguration: IosConfiguration(
-        autoStart: true,
-        onForeground: onStart,
-        onBackground: onIosBackground,
-      ),
-    );
-
-    await service.startService();
-  }
-
-  Future<bool> onIosBackground(ServiceInstance service) async {
-    WidgetsFlutterBinding.ensureInitialized();
-    DartPluginRegistrant.ensureInitialized();
-
-    SharedPreferences preferences = await SharedPreferences.getInstance();
-    await preferences.reload();
-    final log = preferences.getStringList('log') ?? <String>[];
-    log.add(DateTime.now().toIso8601String());
-    await preferences.setStringList('log', log);
-
-    return true;
   }
 
   @override
