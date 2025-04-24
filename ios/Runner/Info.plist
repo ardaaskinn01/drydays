@@ -17,11 +17,11 @@
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.5</string>
+    <string>1.6</string>
     <key>CFBundleSignature</key>
     <string>????</string>
     <key>CFBundleVersion</key>
-    <string>6</string>
+    <string>7</string>
     <key>LSRequiresIPhoneOS</key>
     <true/>
     <key>UILaunchStoryboardName</key>
@@ -53,6 +53,8 @@
     <string>Yakındaki cihazlara bağlanmak için Bluetooth erişimi gereklidir.</string>
     <key>NSUserNotificationUsageDescription</key>
     <string>Bildirim gönderebilmek için izin gereklidir.</string>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>Mikrofon izni gerekli değil ama iOS bu alanı istiyor</string>
 
     <!-- UIBackgroundModes Tanımlaması -->
     <key>UIBackgroundModes</key>
