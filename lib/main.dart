@@ -26,20 +26,27 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
   await initializeDateFormatting('tr_TR', null);
-  await AndroidAlarmManager.initialize();
-  bool hasPermissions = await FlutterBackground.initialize();
-  if (hasPermissions) {
-    await FlutterBackground.enableBackgroundExecution();
+
+  if (Platform.isAndroid) {
+    await AndroidAlarmManager.initialize();
+
+    bool hasPermissions = await FlutterBackground.initialize();
+    if (hasPermissions) {
+      await FlutterBackground.enableBackgroundExecution();
+    }
+
+    await AndroidAlarmManager.periodic(
+      const Duration(minutes: 1),
+      0,
+      myAlarmTask,
+      wakeup: true,
+      exact: true,
+    );
   }
-  await AndroidAlarmManager.periodic(
-    const Duration(minutes: 1), // ✅ 1 dakika
-    0,
-    myAlarmTask,
-    wakeup: true,
-    exact: true,
-  );
+
   runApp(const MyApp());
 }
+
 
  void myAlarmTask() async {
   // Bildirim gönder

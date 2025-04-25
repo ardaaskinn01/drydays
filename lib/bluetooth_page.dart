@@ -45,7 +45,7 @@ class _BluetoothPageState extends State<BluetoothPage> {
   }
 
   Future<void> requestPermissions() async {
-    await [Permission.bluetoothScan, Permission.bluetoothConnect, Permission.location, Permission.notification
+    await [Permission.bluetoothScan, Permission.location, Permission.notification
     ].request();
   }
 
