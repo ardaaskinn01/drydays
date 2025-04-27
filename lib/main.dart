@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'dart:ui';
 import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
-import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_background/flutter_background.dart';
@@ -15,6 +14,8 @@ import 'dart:async';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import 'firebase_options.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 import 'home_page.dart';
 
@@ -218,6 +219,16 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('en'), // İngilizce
+        Locale('az'), // Azerice
+      ],
       home: const SplashScreen(),
     );
   }

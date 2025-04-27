@@ -41,6 +41,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.12.0"
+  audio_session:
+    dependency: "direct main"
+    description:
+      name: audio_session
+      sha256: f100a780050adf5c552d8b59d7af32a60229fda79c623e64004caf9368ccc748
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.2.1"
   audioplayers:
     dependency: "direct main"
     description:
@@ -193,6 +201,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.19.1"
+  convert:
+    dependency: transitive
+    description:
+      name: convert
+      sha256: b30acd5944035672bc15c6b7a8b47d773e41e2f17de064350988c5d02adb1c68
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.1.2"
   cross_file:
     dependency: transitive
     description:
@@ -422,6 +438,27 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.0.0"
+  flutter_localization:
+    dependency: "direct main"
+    description:
+      name: flutter_localization
+      sha256: "987faf0a6c13a267202b28d3ed680647e234245ead1a1c1f95f87e86c6f12490"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.3.2"
+  flutter_localizations:
+    dependency: transitive
+    description: flutter
+    source: sdk
+    version: "0.0.0"
+  flutter_pdfview:
+    dependency: "direct main"
+    description:
+      name: flutter_pdfview
+      sha256: "51413e36ab3f1a2fe0edf97ebfa770e20182ea4a066bc9f292920330d9245c9d"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.4.0+1"
   flutter_test:
     dependency: "direct dev"
     description: flutter
@@ -460,10 +497,10 @@ packages:
     dependency: "direct main"
     description:
       name: intl
-      sha256: "3df61194eb431efc39c4ceba583b95633a403f46c9fd341e550ce0bfa50e9aa5"
+      sha256: d6f56758b7d3014a48af9701c085700aac781a92a87a62b1333b46d8879661cf
       url: "https://pub.dev"
     source: hosted
-    version: "0.20.2"
+    version: "0.19.0"
   json_annotation:
     dependency: transitive
     description:
@@ -472,6 +509,30 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "4.9.0"
+  just_audio:
+    dependency: "direct main"
+    description:
+      name: just_audio
+      sha256: "451d7995b122da6c22fadf0e430280aaf2ad629f77ea7e82c39987b99e8bc7a2"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.10.0"
+  just_audio_platform_interface:
+    dependency: transitive
+    description:
+      name: just_audio_platform_interface
+      sha256: "4cd94536af0219fa306205a58e78d67e02b0555283c1c094ee41e402a14a5c4a"
+      url: "https://pub.dev"
+    source: hosted
+    version: "4.5.0"
+  just_audio_web:
+    dependency: transitive
+    description:
+      name: just_audio_web
+      sha256: "8c7e779892e180cbc9ffb5a3c52f6e90e1cbbf4a63694cc450972a7edbd2bb6d"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.4.15"
   leak_tracker:
     dependency: transitive
     description:
@@ -837,6 +898,22 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.4.1"
+  syncfusion_flutter_core:
+    dependency: transitive
+    description:
+      name: syncfusion_flutter_core
+      sha256: "720ea28f0ab8f8c19fc613c20b978e514c7e4e431171fd85ed8da528e01298e0"
+      url: "https://pub.dev"
+    source: hosted
+    version: "29.1.39"
+  syncfusion_flutter_pdf:
+    dependency: "direct main"
+    description:
+      name: syncfusion_flutter_pdf
+      sha256: "3ebd9b42b13366d454db451cf882509b8a4f46e2bad43032af07eb1c929d4e46"
+      url: "https://pub.dev"
+    source: hosted
+    version: "29.1.39"
   synchronized:
     dependency: transitive
     description:
@@ -877,6 +954,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.4.0"
+  universal_io:
+    dependency: transitive
+    description:
+      name: universal_io
+      sha256: "1722b2dcc462b4b2f3ee7d188dad008b6eb4c40bbd03a3de451d82c78bba9aad"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.2.2"
   url_launcher:
     dependency: "direct main"
     description:

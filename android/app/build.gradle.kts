@@ -23,7 +23,7 @@ android {
     defaultConfig {
         applicationId = "com.aasoft.drydays"
         minSdk = 23
-        targetSdk = 34
+        targetSdk = 33
         versionCode = 5
         versionName = flutter.versionName
     }

@@ -13,7 +13,7 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 import 'main.dart';
 
 bool isBluetoothStarted = false;
-double _alarmVolume = 0.5;
+double _alarmVolume = 0.8;
 String? _selectedAlarm;
 Timer? _scanTimer;
 bool _isPlaying = false;
@@ -22,7 +22,7 @@ String? _alarmingDeviceName;
 bool _isAnimating = true;
 bool alarmingDeviceStillExists = false;
 
-final AudioPlayer _audioPlayer = AudioPlayer();
+AudioPlayer _audioPlayer = AudioPlayer();
 List<String> foundDevices = [];
 
 class BluetoothPage extends StatefulWidget {
@@ -137,12 +137,17 @@ class _BluetoothPageState extends State<BluetoothPage> {
   }
 
   Future<void> playAlarm(String fileName) async {
-    await _audioPlayer.stop();
-    await _audioPlayer.setVolume(_alarmVolume);
+    // AudioPlayer'ı kontrol et, eğer mevcut değilse yeniden başlat
+    if (_audioPlayer.state == PlayerState.stopped || _audioPlayer.state == PlayerState.playing) {
+      await _audioPlayer.stop();  // Mevcut player'ı durduruyoruz
+    } else {
+      _audioPlayer = AudioPlayer();  // Eğer player state'inin dışında bir durumda ise yeni bir player başlatıyoruz
+    }
 
-    // 🔁 Sürekli tekrar etmesi için döngü modu ayarla
-    await _audioPlayer.setReleaseMode(ReleaseMode.loop);
+    await _audioPlayer.setVolume(_alarmVolume); // Ses seviyesi ayarı
+    await _audioPlayer.setReleaseMode(ReleaseMode.loop); // Döngüde çalması için ayar
 
+    // Alarm sesini çal
     await _audioPlayer.play(AssetSource('alarms/$fileName'));
 
     // Alarm çalarken wakelock'u etkinleştir
@@ -260,7 +265,7 @@ class _BluetoothPageState extends State<BluetoothPage> {
     _audioPlayer.setAudioContext(AudioContext(
       iOS: AudioContextIOS(
         category: AVAudioSessionCategory.playback,
-        options: {AVAudioSessionOptions.defaultToSpeaker},
+        //options: {AVAudioSessionOptions.defaultToSpeaker},
       ),
       android: const AudioContextAndroid(
         isSpeakerphoneOn: true,

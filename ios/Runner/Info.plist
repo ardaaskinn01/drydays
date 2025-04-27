@@ -45,6 +45,7 @@
     <true/>
     <key>UIApplicationSupportsIndirectInputEvents</key>
     <true/>
+
     <key>NSLocationWhenInUseUsageDescription</key>
     <string>Bu uygulama konum bilginizi yakındaki cihazları bulmak için kullanır.</string>
     <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
@@ -61,17 +62,16 @@
     <!-- UIBackgroundModes Tanımlaması -->
     <key>UIBackgroundModes</key>
     <array>
-        <string>location</string>
         <string>bluetooth-central</string>
         <string>bluetooth-peripheral</string>
         <string>processing</string>
         <string>fetch</string>
     </array>
 
-    <!-- BGTaskSchedulerPermittedIdentifiers Anahtarı Eklendi -->
+    <!-- BGTaskSchedulerPermittedIdentifiers Anahtarı -->
     <key>BGTaskSchedulerPermittedIdentifiers</key>
     <array>
-        <string>com.aasoft.drydays.backgroundtask</string> <!-- Burada kendi görev kimliğinizi kullanın -->
+        <string>com.aasoft.drydays.backgroundtask</string>
     </array>
 </dict>
 </plist>

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:drydays/pdf_preview_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
@@ -24,6 +25,7 @@ class _RaporOlusturmaPageState extends State<RaporOlusturmaPage> {
   int? selectedMonth;
   bool allSelected = false;
   bool isLoading = false;
+  File? pdfFile = null;
 
   @override
   void initState() {
@@ -176,11 +178,19 @@ class _RaporOlusturmaPageState extends State<RaporOlusturmaPage> {
     final file = File('${output.path}/drydays_${selectedMonth}_${selectedYear}.pdf');
     await file.writeAsBytes(await pdf.save());
 
-    setState(() {
-      isLoading = false;
-    });
-
-    _sharePdf(file);
+// Dosyanın varlığını kontrol edin
+    if (await file.exists()) {
+      print("PDF başarıyla oluşturuldu: ${file.path}");
+      setState(() {
+        isLoading = false;
+        pdfFile = file;
+      });
+    } else {
+      print("PDF oluşturulamadı!");
+      setState(() {
+        isLoading = false;
+      });
+    }
   }
 
   pw.Widget _buildInfo(pw.Font font, String label, String value) {
@@ -194,12 +204,8 @@ class _RaporOlusturmaPageState extends State<RaporOlusturmaPage> {
     );
   }
 
-
   void _sharePdf(File file) {
-    // XFile'a dönüştürme
     final xFile = XFile(file.path);
-
-    // Paylaşma işlemi
     Share.shareXFiles([xFile], text: 'Raporu Paylaş');
   }
 
@@ -270,13 +276,13 @@ class _RaporOlusturmaPageState extends State<RaporOlusturmaPage> {
         elevation: 4,
       ),
       backgroundColor: Color(0xFFD5CE9D), // Arkaplan rengini buraya ekliyoruz
-      body: Center( // İçeriği merkeze yerleştirdik
+      body: Center(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
-          child: SingleChildScrollView( // Ekran taşmasını engellemek için
+          child: SingleChildScrollView(
             child: Column(
-              mainAxisSize: MainAxisSize.min, // İçeriği minimumda tutuyoruz
-              crossAxisAlignment: CrossAxisAlignment.center, // Yalnızca merkezde hizalamak için
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 if (savedName != null) ...[
                   // Yıl seçimi
@@ -372,11 +378,59 @@ class _RaporOlusturmaPageState extends State<RaporOlusturmaPage> {
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
                   ),
                 ),
+                const SizedBox(height: 20),
                 if (isLoading)
                   const Padding(
                     padding: EdgeInsets.all(16.0),
                     child: CircularProgressIndicator(),
-                  ), // Yükleniyor göstergesi
+                  ),
+                if (!isLoading && pdfFile != null) ...[
+                  ElevatedButton(
+                    onPressed: () {
+                      // PDF'i görüntüleme işlemi
+                      if (pdfFile != null) {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => PdfPreviewScreen(pdfFile: pdfFile!),
+                          ),
+                        );
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text("PDF oluşturulamadı!")),
+                        );
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                      padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                      elevation: 5,
+                    ),
+                    child: Text(
+                      'PDF\'i İncele',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  ElevatedButton(
+                    onPressed: () {
+                      if (pdfFile != null) {
+                        _sharePdf(pdfFile!);
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.orange,
+                      padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                      elevation: 5,
+                    ),
+                    child: Text(
+                      'Raporu Paylaş',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
