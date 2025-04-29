@@ -31,11 +31,6 @@ void main() async {
   if (Platform.isAndroid) {
     await AndroidAlarmManager.initialize();
 
-    bool hasPermissions = await FlutterBackground.initialize();
-    if (hasPermissions) {
-      await FlutterBackground.enableBackgroundExecution();
-    }
-
     await AndroidAlarmManager.periodic(
       const Duration(minutes: 1),
       0,

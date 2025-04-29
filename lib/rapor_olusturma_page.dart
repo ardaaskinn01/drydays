@@ -152,7 +152,7 @@ class _RaporOlusturmaPageState extends State<RaporOlusturmaPage> {
                       pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('No', style: pw.TextStyle(font: font, fontSize: 18, fontWeight: pw.FontWeight.bold))),
                       pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('Alarm Saati', style: pw.TextStyle(font: font, fontSize: 18, fontWeight: pw.FontWeight.bold))),
                       pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('Bez Islaklığı', style: pw.TextStyle(font: font, fontSize: 18, fontWeight: pw.FontWeight.bold))),
-                      pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('Dışarı İşeme', style: pw.TextStyle(font: font, fontSize: 18, fontWeight: pw.FontWeight.bold))),
+                      pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('Tuvalette Sonlandırma', style: pw.TextStyle(font: font, fontSize: 18, fontWeight: pw.FontWeight.bold))),
                     ],
                   ),
 

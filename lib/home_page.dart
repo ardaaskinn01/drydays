@@ -68,7 +68,7 @@ class HomePage extends StatefulWidget {
             context,
             HomePage(title: "Ana Sayfa"),
           ),
-          _buildDrawerItem(
+          /* _buildDrawerItem(
             Icons.info,
             'Hakkımızda',
             context,
@@ -79,19 +79,19 @@ class HomePage extends StatefulWidget {
             'Ürünler & Aksesuarlar',
             context,
             const ProductsPage(),
-          ),
+          ),*/
           _buildDrawerItem(
             Icons.question_answer,
             'Enürezis Nokturna Nedir',
             context,
             const EnuresisPage(),
           ),
-          _buildDrawerItem(
+         /* _buildDrawerItem(
             Icons.play_circle,
             'Dry Days Nasıl Kullanılır',
             context,
             const HowToUsePage(),
-          ),
+          ),*/
           _buildDrawerItem(Icons.article, 'Blog', context, const BlogPage()),
           _buildDrawerItem(
             Icons.contact_mail,
@@ -99,13 +99,13 @@ class HomePage extends StatefulWidget {
             context,
             const ContactPage(),
           ),
-          const Divider(),
+        /*  const Divider(),
           _buildDrawerItem(
             Icons.bluetooth,
             'Bluetooth',
             context,
             const BluetoothPage(),
-          ),
+          ),*/
         ],
       ),
     );
@@ -137,6 +137,8 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _loadSavedName() async {
+    await _showPrivacyNoticeDialog(); // Bilgilendirme dialogunu ilk sıraya ekledik
+
     final prefs = await SharedPreferences.getInstance();
     final name = prefs.getString('username');
 
@@ -148,6 +150,36 @@ class _HomePageState extends State<HomePage> {
       await _loadTodayData();
     } else {
       await _promptForName();
+    }
+  }
+
+  Future<void> _showPrivacyNoticeDialog() async {
+    final prefs = await SharedPreferences.getInstance();
+    final hasSeenNotice = prefs.getBool('hasSeenPrivacyNotice') ?? false;
+
+    if (!hasSeenNotice) {
+      await showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text("Gizlilik Bilgilendirmesi"),
+          content: const Text(
+            "Bu uygulama, kullanıcıdan gelen verileri saklar. "
+                "Geliştirici bu verilere erişmez ve işlemez. "
+                "Uygulamanın amacı yalnızca kullanıcıların kendi süreçlerini takip etmelerini kolaylaştırmaktır.",
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text("Tamam"),
+            ),
+          ],
+        ),
+      );
+
+      // Kullanıcı bir kere gördü, bir daha gösterme
+      await prefs.setBool('hasSeenPrivacyNotice', true);
     }
   }
 
@@ -416,7 +448,7 @@ class _HomePageState extends State<HomePage> {
               const SizedBox(height: 10),
               _buildDropdown(
                 value: outsideUrine[i],
-                label: 'Dışarı İşeme',
+                label: 'Tuvalette Sonlandırma Miktarı',
                 items: ['Az', 'Orta', 'Çok'],
                 icon: Icons.bloodtype,
                 onChanged: (val) => setState(() => outsideUrine[i] = val!),
@@ -564,7 +596,7 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ),
               ),
-              const SizedBox(height: 20), // Araya biraz boşluk koyuyorum
+              const SizedBox(height: 50), // Araya biraz boşluk koyuyorum
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
@@ -582,7 +614,7 @@ class _HomePageState extends State<HomePage> {
                     style: TextStyle(color: Colors.white),
                   ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.teal,
+                    backgroundColor: Colors.deepOrange,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
