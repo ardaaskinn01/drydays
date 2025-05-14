@@ -6,9 +6,9 @@ list(APPEND FLUTTER_PLUGIN_LIST
   audioplayers_windows
   cloud_firestore
   firebase_core
-  flutter_localization
   permission_handler_windows
   share_plus
+  syncfusion_pdfviewer_windows
   url_launcher_windows
 )
 

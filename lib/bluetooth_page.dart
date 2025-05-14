@@ -1,15 +1,20 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:ui';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:intl/intl.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
+import 'alarm_records_screen.dart';
+import 'language_provider.dart';
 import 'main.dart';
 
 bool isBluetoothStarted = false;
@@ -33,16 +38,89 @@ class BluetoothPage extends StatefulWidget {
 }
 
 class _BluetoothPageState extends State<BluetoothPage> {
+  bool _isAuthorized = false;
+  TextEditingController _passwordController = TextEditingController();
+  Timer? scanTimer;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  String? currentRecordId;
+
+  Future<void> logAlarmStart(String deviceName) async {
+    final username = await getUsernameFromPrefs();
+    final date = getFormattedDate();
+    final recordId = await getNextRecordId(username, date);
+
+    final now = DateTime.now();
+    final formattedTime = DateFormat('HH:mm:ss').format(now);
+
+    await _firestore
+        .collection(username)
+        .doc(date)
+        .collection('alarmrecords')
+        .doc(recordId)
+        .set({
+      'device': deviceName,
+      'startTime': formattedTime,
+      'endTime': null, // sonra güncellenir
+    });
+
+    // Aktif kaydın id'sini sakla
+    currentRecordId = recordId;
+  }
+
+  Future<void> logAlarmStop(String deviceName) async {
+    if (currentRecordId == null) return;
+
+    final username = await getUsernameFromPrefs();
+    final date = getFormattedDate();
+
+    final now = DateTime.now();
+    final formattedTime = DateFormat('HH:mm:ss').format(now);
+
+    await _firestore
+        .collection(username)
+        .doc(date)
+        .collection('alarmrecords')
+        .doc(currentRecordId!)
+        .update({
+      'endTime': formattedTime,
+    });
+
+    currentRecordId = null;
+  }
+// Bugünün tarihini döndürür: 05.05.2025
+  String getFormattedDate() {
+    final now = DateTime.now();
+    return "${now.day.toString().padLeft(2, '0')}.${now.month.toString().padLeft(2, '0')}.${now.year}";
+  }
+
+  Future<String> getUsernameFromPrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('username') ?? 'unknown_user';
+  }
+
+// Bugünkü kayıt sayısını bulur (01, 02, ...)
+  Future<String> getNextRecordId(String username, String date) async {
+    final snapshot = await _firestore
+        .collection(username)
+        .doc(date)
+        .collection('alarmrecords')
+        .get();
+    final count = snapshot.docs.length + 1;
+    return count.toString().padLeft(2, '0');
+  }
 
   Future<void> stopBluetooth() async {
-    FlutterBluePlus.stopScan();
-    _scanTimer?.cancel();
-    await WakelockPlus.disable();
+    await FlutterBluePlus.stopScan();
+    WakelockPlus.disable();
+    scanTimer?.cancel();
+    scanTimer = null;
     setState(() {
       isBluetoothStarted = false;
       foundDevices.clear();
+      _alarmingDeviceName = null;
     });
   }
+
 
   Future<void> requestPermissions() async {
     await [Permission.bluetoothScan, Permission.location, Permission.notification
@@ -50,11 +128,12 @@ class _BluetoothPageState extends State<BluetoothPage> {
   }
 
   Future<void> startBluetooth() async {
-    await initializeService();
-    // Alarm seçili mi kontrol et
+    // await initializeService();
+
     if (_selectedAlarm == null) {
+      String message = LanguageProvider.translate(context, 'pleaseSelectAlarm');
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Lütfen önce bir alarm seçiniz")),
+        SnackBar(content: Text(message)),
       );
       return;
     }
@@ -63,8 +142,9 @@ class _BluetoothPageState extends State<BluetoothPage> {
 
     final isOn = await FlutterBluePlus.isOn;
     if (!isOn) {
+      String message = LanguageProvider.translate(context, 'turnOnBluetooth');
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Lütfen Bluetooth'u açın")),
+        SnackBar(content: Text(message)),
       );
       return;
     }
@@ -74,50 +154,49 @@ class _BluetoothPageState extends State<BluetoothPage> {
       foundDevices.clear();
     });
 
-    // İlk taramayı başlat
-    await FlutterBluePlus.startScan(
-      timeout: const Duration(seconds: 12),
-      androidScanMode: AndroidScanMode.lowLatency,
-    );
+    // Tarama işlemini her 10 saniyede bir tekrarla
+    scanTimer?.cancel(); // varsa önceki taramayı durdur
+    scanTimer = Timer.periodic(const Duration(seconds: 10), (_) async {
+      await FlutterBluePlus.startScan(
+        timeout: const Duration(seconds: 5),
+        androidScanMode: AndroidScanMode.lowLatency,
+      );
+    });
 
-    // Sonuçları dinle
+    // Cihazları dinle
     FlutterBluePlus.scanResults.listen((results) async {
       bool alarmingDeviceStillExists = false;
 
       for (ScanResult result in results) {
         final name = result.device.name;
-        final manufacturerData = result.advertisementData.manufacturerData;
 
-        // ESP32 ise ve veri içeriyorsa
-        if (name.toLowerCase().contains("esp32")) {
-          // İsteğe bağlı: ESP32 isimli cihazları listeye ekleyebilirsin
+        if (name == "Islak1") {
           if (!foundDevices.contains(name)) {
             setState(() {
               foundDevices.add(name);
             });
           }
 
-          // Örnek olarak "nem=1" verisi geldi mi?
-          if (manufacturerData.isNotEmpty) {
-            final rawData = manufacturerData.values.first;
-            final dataString = String.fromCharCodes(rawData);
-
-            if (dataString.contains("nem=1")) {
-              if (!_isPlaying && _selectedAlarm != null) {
-                await playAlarm(_selectedAlarm!);
-                setState(() {
-                  _alarmingDeviceName = name;
-                });
-              }
-              alarmingDeviceStillExists = true;
-            }
+          if (!_isPlaying && _selectedAlarm != null) {
+            await playAlarm(_selectedAlarm!, name);  // name burada cihaz adı
+            setState(() {
+              _alarmingDeviceName = name;
+            });
           }
+
+
+          alarmingDeviceStillExists = true;
         }
       }
 
-      // Eğer alarm çalıyorsa ama artık veri yoksa durdur
+      // Islak1 artık görünmüyorsa alarmı durdur
       if (_isPlaying && !alarmingDeviceStillExists) {
         await stopAlarm();
+        await logAlarmStop(_alarmingDeviceName ?? "Unknown");
+        setState(() {
+          _alarmingDeviceName = null;
+          foundDevices.remove("Islak1");
+        });
       }
     });
   }
@@ -136,21 +215,19 @@ class _BluetoothPageState extends State<BluetoothPage> {
     });
   }
 
-  Future<void> playAlarm(String fileName) async {
-    // AudioPlayer'ı kontrol et, eğer mevcut değilse yeniden başlat
+  Future<void> playAlarm(String fileName, String deviceName) async {
     if (_audioPlayer.state == PlayerState.stopped || _audioPlayer.state == PlayerState.playing) {
-      await _audioPlayer.stop();  // Mevcut player'ı durduruyoruz
+      await _audioPlayer.stop();
     } else {
-      _audioPlayer = AudioPlayer();  // Eğer player state'inin dışında bir durumda ise yeni bir player başlatıyoruz
+      _audioPlayer = AudioPlayer();
     }
 
-    await _audioPlayer.setVolume(_alarmVolume); // Ses seviyesi ayarı
-    await _audioPlayer.setReleaseMode(ReleaseMode.loop); // Döngüde çalması için ayar
+    await logAlarmStart(deviceName);
 
-    // Alarm sesini çal
+    await _audioPlayer.setVolume(_alarmVolume);
+    await _audioPlayer.setReleaseMode(ReleaseMode.loop);
     await _audioPlayer.play(AssetSource('alarms/$fileName'));
 
-    // Alarm çalarken wakelock'u etkinleştir
     await WakelockPlus.enable();
 
     setState(() {
@@ -161,10 +238,11 @@ class _BluetoothPageState extends State<BluetoothPage> {
     startNameAnimation();
   }
 
+
+
   Future<void> stopAlarm() async {
     await _audioPlayer.stop();
-
-    // 🔁 Döngüyü devre dışı bırak
+    await logAlarmStop(_alarmingDeviceName ?? "Unknown");
     await _audioPlayer.setReleaseMode(ReleaseMode.release);
 
     setState(() {
@@ -173,6 +251,7 @@ class _BluetoothPageState extends State<BluetoothPage> {
       _alarmingDeviceName = null;
     });
   }
+
 
   Future<void> loadSelectedAlarm() async {
     final prefs = await SharedPreferences.getInstance();
@@ -191,7 +270,7 @@ class _BluetoothPageState extends State<BluetoothPage> {
         return StatefulBuilder(
           builder: (context, setStateDialog) {
             return AlertDialog(
-              title: const Text("Alarm Seç"),
+              title: Text(LanguageProvider.translate(context, 'selectingAlarm')),
               content: SizedBox(
                 width: double.maxFinite,
                 child: ListView.builder(
@@ -203,11 +282,12 @@ class _BluetoothPageState extends State<BluetoothPage> {
                     final isPlaying = _currentlyPlaying == fileName;
 
                     return ListTile(
-                      leading:
-                          isSelected
-                              ? const Icon(Icons.check_circle, color: Colors.green,)
-                              : const Icon(Icons.circle_outlined),
-                      title: Text("Alarm ${index + 1}"),
+                      leading: isSelected
+                          ? const Icon(Icons.check_circle, color: Colors.green)
+                          : const Icon(Icons.circle_outlined),
+                      title: Text(
+                        '${LanguageProvider.translate(context, 'alarm')} ${index + 1}',
+                      ),
                       trailing: IconButton(
                         icon: Icon(isPlaying ? Icons.stop : Icons.play_arrow),
                         onPressed: () async {
@@ -216,9 +296,7 @@ class _BluetoothPageState extends State<BluetoothPage> {
                             setState(() {
                               _currentlyPlaying = null;
                             });
-                            setStateDialog(
-                              () {},
-                            ); // Dialog içindeki UI'ı yenile
+                            setStateDialog(() {});
                           } else {
                             await _audioPlayer.stop();
                             await _audioPlayer.play(
@@ -227,7 +305,7 @@ class _BluetoothPageState extends State<BluetoothPage> {
                             setState(() {
                               _currentlyPlaying = fileName;
                             });
-                            setStateDialog(() {}); // UI güncelle
+                            setStateDialog(() {});
                           }
                         },
                       ),
@@ -258,9 +336,55 @@ class _BluetoothPageState extends State<BluetoothPage> {
     });
   }
 
+  Future<void> _showPasswordDialog() async {
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return AlertDialog(
+          title: Text(LanguageProvider.translate(context, 'passwordTitle')),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(LanguageProvider.translate(context, 'passwordHint')),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _passwordController,
+                obscureText: true,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  border: const OutlineInputBorder(),
+                  labelText: LanguageProvider.translate(context, 'passwordLabel'),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                if (_passwordController.text == "1234") {
+                  setState(() {
+                    _isAuthorized = true;
+                  });
+                  Navigator.of(context).pop();
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(LanguageProvider.translate(context, 'wrongPassword'))),
+                  );
+                }
+              },
+              child: Text(LanguageProvider.translate(context, 'loginButton')),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   void initState() {
     super.initState();
+    Future.delayed(Duration.zero, _showPasswordDialog);
 
     _audioPlayer.setAudioContext(AudioContext(
       iOS: AudioContextIOS(
@@ -293,16 +417,40 @@ class _BluetoothPageState extends State<BluetoothPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (!_isAuthorized) {
+      return const Scaffold(
+        backgroundColor: Color(0xFFF6F5F2),
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
     return Scaffold(
       backgroundColor: const Color(0xFFF6F5F2),
       appBar: AppBar(
         backgroundColor: const Color(0xFF4A90E2),
         elevation: 0,
         centerTitle: true,
-        title: const Text(
-          'Bluetooth Ayarları',
-          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+        title: Text(
+          LanguageProvider.translate(context, 'bluetoothSettings'),
+          style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
         ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const AlarmRecordsScreen()),
+              );
+            },
+            child: Text(
+              LanguageProvider.translate(context, 'alarmRecords'),
+              style: const TextStyle(
+                color: Colors.amberAccent,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -323,7 +471,9 @@ class _BluetoothPageState extends State<BluetoothPage> {
             ),
             icon: Icon(isBluetoothStarted ? Icons.stop : Icons.play_arrow),
             label: Text(
-              isBluetoothStarted ? "Bluetooth'u Durdur" : "Bluetooth'u Başlat",
+              isBluetoothStarted
+                  ? LanguageProvider.translate(context, 'stopBluetooth')
+                  : LanguageProvider.translate(context, 'startBluetooth'),
             ),
           ),
           const SizedBox(height: 25),
@@ -348,14 +498,7 @@ class _BluetoothPageState extends State<BluetoothPage> {
                         ? Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
-                              'Bulunan Cihazlar',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.black87,
-                              ),
-                            ),
+                            Text(LanguageProvider.translate(context, 'foundDevices')),
                             const Divider(),
                             const SizedBox(height: 8),
                             Expanded(
@@ -382,8 +525,8 @@ class _BluetoothPageState extends State<BluetoothPage> {
                             ),
                           ],
                         )
-                        : const Center(
-                          child: Text("Bluetooth henüz başlatılmadı"),
+                        : Center(
+                          child: Text(LanguageProvider.translate(context, 'bluetoothNotStarted')),
                         ),
               ),
             ),
@@ -393,9 +536,9 @@ class _BluetoothPageState extends State<BluetoothPage> {
             Center(
               child: Column(
                 children: [
-                  const Text(
-                    "🔔 ALARM!",
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.red),
+                  Text(
+                    LanguageProvider.translate(context, 'alarmActive'),
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.red),
                   ),
                   const SizedBox(height: 8),
                   AnimatedScale(
@@ -412,7 +555,7 @@ class _BluetoothPageState extends State<BluetoothPage> {
                   ElevatedButton.icon(
                     onPressed: stopAlarm,
                     icon: const Icon(Icons.stop),
-                    label: const Text("Alarmı Kapat"),
+                    label: Text(LanguageProvider.translate(context, 'stopAlarm')),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.redAccent,
                       foregroundColor: Colors.white,
@@ -442,17 +585,14 @@ class _BluetoothPageState extends State<BluetoothPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  "🔔 Alarm Ayarları",
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
+                Text(LanguageProvider.translate(context, 'alarmSettings')),
                 const SizedBox(height: 16),
                 Row(
                   children: [
                     ElevatedButton.icon(
                       onPressed: () => selectAlarm(context),
                       icon: const Icon(Icons.music_note, size: 20),
-                      label: const Text("Alarm Seç"),
+                      label: Text(LanguageProvider.translate(context, 'selectAlarm')),
                       style: ElevatedButton.styleFrom(backgroundColor: Colors.indigo, foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(30),
@@ -463,9 +603,8 @@ class _BluetoothPageState extends State<BluetoothPage> {
                     Expanded(
                       child: Text(
                         _selectedAlarm != null
-                            ? "Seçili: Alarm ${_selectedAlarm!.split('.').first}"
-                            : "Alarm seçilmedi",
-                        style: const TextStyle(fontSize: 14),
+                            ? "${LanguageProvider.translate(context, 'selected')}: Alarm ${_selectedAlarm!.split('.').first}"
+                            : LanguageProvider.translate(context, 'noAlarmSelected'),
                       ),
                     ),
                     IconButton(
@@ -475,7 +614,7 @@ class _BluetoothPageState extends State<BluetoothPage> {
                                 if (_isPlaying) {
                                   await stopAlarm();
                                 } else {
-                                  await playAlarm(_selectedAlarm!);
+                                  await playAlarm(_selectedAlarm!, "");
                                 }
                               }
                               : null,
@@ -486,10 +625,7 @@ class _BluetoothPageState extends State<BluetoothPage> {
                   ],
                 ),
                 const SizedBox(height: 20),
-                const Text(
-                  "🔊 Ses Seviyesi",
-                  style: TextStyle(fontWeight: FontWeight.w500),
-                ),
+                Text(LanguageProvider.translate(context, 'volume')),
                 Slider(
                   value: _alarmVolume,
                   onChanged: (value) async {
@@ -497,8 +633,20 @@ class _BluetoothPageState extends State<BluetoothPage> {
                     setState(() {
                       _alarmVolume = value;
                     });
+
                     await prefs.setDouble('alarm_volume', value);
-                  }, min: 0, max: 1, divisions: 10, label: "${(_alarmVolume * 100).round()}%", activeColor: Colors.blueAccent, inactiveColor: Colors.blue[100],
+
+                    // Eğer alarm çalıyorsa, ses seviyesini güncelle
+                    if (_isPlaying) {
+                      await _audioPlayer.setVolume(_alarmVolume);
+                    }
+                  },
+                  min: 0,
+                  max: 1,
+                  divisions: 10,
+                  label: "${(_alarmVolume * 100).round()}%",
+                  activeColor: Colors.blueAccent,
+                  inactiveColor: Colors.blue[100],
                 ),
               ],
             ),

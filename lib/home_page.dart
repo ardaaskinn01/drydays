@@ -1,9 +1,14 @@
 import 'package:drydays/rapor_olusturma_page.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'about_page.dart';
+import 'calendar_page.dart';
+import 'language_provider.dart';
+import 'ogretici_page.dart';
 import 'products_page.dart';
 import 'enuresis_page.dart';
 import 'how_to_use_page.dart';
@@ -13,6 +18,7 @@ import 'bluetooth_page.dart';
 
 class HomePage extends StatefulWidget {
   final String title;
+
   const HomePage({super.key, required this.title});
 
   Widget _buildDrawerItem(
@@ -64,48 +70,98 @@ class HomePage extends StatefulWidget {
           ),
           _buildDrawerItem(
             Icons.home,
-            'Ana Sayfa',
+            LanguageProvider.translate(context, 'home'),
             context,
-            HomePage(title: "Ana Sayfa"),
-          ),
-          /* _buildDrawerItem(
-            Icons.info,
-            'Hakkımızda',
-            context,
-            const AboutPage(),
+            HomePage(title: LanguageProvider.translate(context, 'home')),
           ),
           _buildDrawerItem(
-            Icons.shopping_bag,
-            'Ürünler & Aksesuarlar',
-            context,
-            const ProductsPage(),
-          ),*/
-          _buildDrawerItem(
-            Icons.question_answer,
-            'Enürezis Nokturna Nedir',
-            context,
-            const EnuresisPage(),
-          ),
-         /* _buildDrawerItem(
             Icons.play_circle,
-            'Dry Days Nasıl Kullanılır',
+            LanguageProvider.translate(context, 'howToUse'),
             context,
             const HowToUsePage(),
-          ),*/
-          _buildDrawerItem(Icons.article, 'Blog', context, const BlogPage()),
+          ),
           _buildDrawerItem(
             Icons.contact_mail,
-            'İletişim',
+            LanguageProvider.translate(context, 'contact'),
             context,
             const ContactPage(),
           ),
-        /*  const Divider(),
+          const Divider(),
           _buildDrawerItem(
-            Icons.bluetooth,
-            'Bluetooth',
+            Icons.calendar_month,
+            LanguageProvider.translate(context, 'calendar'),
             context,
-            const BluetoothPage(),
-          ),*/
+            const CalendarPage(),
+          ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.language, color: Colors.teal),
+            title: Text(
+              LanguageProvider.translate(context, 'language'),
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            onTap: () {
+              Navigator.of(context).pop();
+              showDialog(
+                context: context,
+                builder: (_) {
+                  return AlertDialog(
+                    title: Text(
+                      LanguageProvider.translate(context, 'languageSelect'),
+                    ),
+                    content: Consumer<LanguageProvider>(
+                      builder: (context, lang, _) {
+                        return Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            RadioListTile(
+                              title: Text(
+                                LanguageProvider.translate(context, 'turkish'),
+                              ),
+                              value: 'tr',
+                              groupValue: lang.currentLocale.languageCode,
+                              onChanged: (value) {
+                                lang.changeLanguage(value as String);
+                                Navigator.of(context).pop();
+                              },
+                            ),
+                            RadioListTile(
+                              title: Text(
+                                LanguageProvider.translate(
+                                  context,
+                                  '🇦🇿 Azərbaycan',
+                                ),
+                              ),
+                              value: 'az',
+                              groupValue: lang.currentLocale.languageCode,
+                              onChanged: (value) {
+                                lang.changeLanguage(value as String);
+                                Navigator.of(context).pop();
+                              },
+                            ),
+                            RadioListTile(
+                              title: Text(
+                                LanguageProvider.translate(
+                                  context,
+                                  '🇬🇧 English',
+                                ),
+                              ),
+                              value: 'en',
+                              groupValue: lang.currentLocale.languageCode,
+                              onChanged: (value) {
+                                lang.changeLanguage(value as String);
+                                Navigator.of(context).pop();
+                              },
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+                  );
+                },
+              );
+            },
+          ),
         ],
       ),
     );
@@ -123,8 +179,8 @@ class _HomePageState extends State<HomePage> {
   String? savedName;
   TimeOfDay? bedTime;
   TimeOfDay? wakeTime;
-  String morningStatus = 'Kuru';
-  String moodStatus = 'Normal';
+  String? morningStatus;
+  String? moodStatus;
   final TextEditingController _alarmCountController = TextEditingController();
   List<TimeOfDay?> alarmTimes = [];
   List<String> diaperWetness = [];
@@ -137,9 +193,22 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _loadSavedName() async {
-    await _showPrivacyNoticeDialog(); // Bilgilendirme dialogunu ilk sıraya ekledik
+    await _showPrivacyNoticeDialog(); // Önce gizlilik bildirimi göster
 
     final prefs = await SharedPreferences.getInstance();
+    final isFirstLaunch = prefs.getBool('isFirstLaunch') ?? true;
+
+    if (isFirstLaunch) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => const TutorialDialog(),
+        );
+      });
+      await prefs.setBool('isFirstLaunch', false);
+    }
+
     final name = prefs.getString('username');
 
     if (name != null && name.isNotEmpty) {
@@ -161,24 +230,19 @@ class _HomePageState extends State<HomePage> {
       await showDialog(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text("Gizlilik Bilgilendirmesi"),
-          content: const Text(
-            "Bu uygulama, kullanıcıdan gelen verileri saklar. "
-                "Geliştirici bu verilere erişmez ve işlemez. "
-                "Uygulamanın amacı yalnızca kullanıcıların kendi süreçlerini takip etmelerini kolaylaştırmaktır.",
-          ),
+          title: Text(LanguageProvider.translate(context, 'privacyNoticeTitle')),
+          content: Text(LanguageProvider.translate(context, 'privacyNoticeContent')),
           actions: [
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop();
               },
-              child: const Text("Tamam"),
+              child: Text(LanguageProvider.translate(context, 'ok')),
             ),
           ],
         ),
       );
 
-      // Kullanıcı bir kere gördü, bir daha gösterme
       await prefs.setBool('hasSeenPrivacyNotice', true);
     }
   }
@@ -190,12 +254,8 @@ class _HomePageState extends State<HomePage> {
       context: context,
       barrierDismissible: false,
       builder: (context) {
-        String enteredName = '';
-
         return Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
             child: Column(
@@ -203,15 +263,15 @@ class _HomePageState extends State<HomePage> {
               children: [
                 const Icon(Icons.person, size: 48, color: Colors.teal),
                 const SizedBox(height: 16),
-                const Text(
-                  "İsim Giriniz",
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                Text(
+                  LanguageProvider.translate(context, 'enterName'),
+                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 16),
                 TextField(
                   autofocus: true,
                   decoration: InputDecoration(
-                    hintText: "İsim Soyisim",
+                    hintText: LanguageProvider.translate(context, 'nameHint'),
                     prefixIcon: const Icon(Icons.edit),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -227,17 +287,43 @@ class _HomePageState extends State<HomePage> {
                   child: ElevatedButton.icon(
                     onPressed: () async {
                       if (enteredName.isNotEmpty) {
-                        final prefs = await SharedPreferences.getInstance();
-                        await prefs.setString('username', enteredName);
-                        setState(() {
-                          savedName = enteredName;
-                          _nameController.text = enteredName;
-                        });
-                        Navigator.of(context).pop();
+                        final doc = await FirebaseFirestore.instance
+                            .collection('all_users')
+                            .doc(enteredName)
+                            .get();
+
+                        if (doc.exists) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(LanguageProvider.translate(context, 'nameExists')),
+                              backgroundColor: Colors.redAccent,
+                            ),
+                          );
+                        } else {
+                          await FirebaseFirestore.instance
+                              .collection('all_users')
+                              .doc(enteredName)
+                              .set({'createdAt': Timestamp.now()});
+                          await FirebaseFirestore.instance
+                              .collection(enteredName)
+                              .doc('meta')
+                              .set({'createdAt': Timestamp.now()});
+
+                          final prefs = await SharedPreferences.getInstance();
+                          await prefs.setString('username', enteredName);
+
+                          setState(() {
+                            savedName = enteredName;
+                            _nameController.text = enteredName;
+                          });
+
+                          Navigator.of(context).pop();
+                          await _loadTodayData();
+                        }
                       }
                     },
                     icon: const Icon(Icons.save),
-                    label: const Text("Kaydet"),
+                    label: Text(LanguageProvider.translate(context, 'save')),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.teal,
                       padding: const EdgeInsets.symmetric(vertical: 14),
@@ -253,8 +339,6 @@ class _HomePageState extends State<HomePage> {
         );
       },
     );
-
-    await _loadTodayData();
   }
 
   Future<void> _saveName(String name) async {
@@ -271,27 +355,89 @@ class _HomePageState extends State<HomePage> {
     return DateFormat('dd.MM.yyyy').format(adjustedTime);
   }
 
-  Future<void> _pickTime(bool isBedTime) async {
-    final TimeOfDay? picked = await showTimePicker(
+  Future<void> _pickTime(BuildContext context, bool isBedTime) async {
+    final TimeOfDay initialTime = isBedTime ? bedTime ?? TimeOfDay.now() : wakeTime ?? TimeOfDay.now();
+
+    int selectedHour = initialTime.hour;
+    int selectedMinute = initialTime.minute;
+
+    showModalBottomSheet(
       context: context,
-      initialTime: TimeOfDay.now(),
-      builder: (context, child) {
-        return MediaQuery(
-          data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
-          child: child!,
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.all(16.0),
+          height: 250,
+          child: Column(
+            children: [
+              Text(
+                LanguageProvider.translate(context, isBedTime ? 'selectBedTime' : 'selectWakeTime'),
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              Expanded(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // Saat Seçici
+                    SizedBox(
+                      width: 80,
+                      child: CupertinoPicker(
+                        scrollController: FixedExtentScrollController(initialItem: selectedHour),
+                        itemExtent: 40,
+                        onSelectedItemChanged: (int index) {
+                          selectedHour = index;
+                        },
+                        children: List.generate(24, (index) {
+                          return Center(
+                            child: Text(
+                              NumberFormat('00').format(index),
+                              style: const TextStyle(fontSize: 22),
+                            ),
+                          );
+                        }),
+                      ),
+                    ),
+                    const Text(":", style: TextStyle(fontSize: 24)),
+                    // Dakika Seçici
+                    SizedBox(
+                      width: 80,
+                      child: CupertinoPicker(
+                        scrollController: FixedExtentScrollController(initialItem: selectedMinute),
+                        itemExtent: 40,
+                        onSelectedItemChanged: (int index) {
+                          selectedMinute = index;
+                        },
+                        children: List.generate(60, (index) {
+                          return Center(
+                            child: Text(
+                              NumberFormat('00').format(index),
+                              style: const TextStyle(fontSize: 22),
+                            ),
+                          );
+                        }),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  setState(() {
+                    final selectedTime = TimeOfDay(hour: selectedHour, minute: selectedMinute);
+                    if (isBedTime) {
+                      bedTime = selectedTime;
+                    } else {
+                      wakeTime = selectedTime;
+                    }
+                  });
+                  Navigator.pop(context);
+                },
+                child: Text(LanguageProvider.translate(context, 'confirm'), style: TextStyle(color: Colors.black),),
+              ),
+            ],
+          ),
         );
       },
     );
-
-    if (picked != null) {
-      setState(() {
-        if (isBedTime) {
-          bedTime = picked;
-        } else {
-          wakeTime = picked;
-        }
-      });
-    }
   }
 
   Future<void> _saveData() async {
@@ -342,8 +488,8 @@ class _HomePageState extends State<HomePage> {
           wakeTime = _parseTimeOfDay(data['wakeTime']);
           _peeCountController.text = (data['peeCount'] ?? 0).toString();
           _wetCountController.text = (data['wetCount'] ?? 0).toString();
-          morningStatus = data['morningStatus'] ?? 'Kuru';
-          moodStatus = data['moodStatus'] ?? 'Normal';
+          morningStatus = data['morningStatus'] ?? LanguageProvider.translate(context, 'tamKuru');
+          moodStatus = data['moodStatus'] ?? LanguageProvider.translate(context, 'normal');
         });
       }
     }
@@ -359,11 +505,11 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildTimeTile(
-    BuildContext context, {
-    required String title,
-    required IconData icon,
-    required VoidCallback onTap,
-  }) {
+      BuildContext context, {
+        required String title,
+        required IconData icon,
+        required VoidCallback onTap,
+      }) {
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ListTile(
@@ -375,20 +521,22 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildAlarmInput() {
+  Widget _buildAlarmInput(BuildContext context) {
+    final tr = (String key) => LanguageProvider.translate(context, key);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildNumberInput(
           controller: _alarmCountController,
-          label: 'Alarm çalma sayısı',
+          label: tr('alarmCount'),
           icon: Icons.alarm,
           onChanged: (val) {
             final count = int.tryParse(val) ?? 0;
             setState(() {
               alarmTimes = List.generate(count, (_) => null);
-              diaperWetness = List.generate(count, (_) => 'Az');
-              outsideUrine = List.generate(count, (_) => 'Az');
+              diaperWetness = List.generate(count, (_) => tr('less'));
+              outsideUrine = List.generate(count, (_) => tr('less'));
             });
           },
         ),
@@ -397,10 +545,7 @@ class _HomePageState extends State<HomePage> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Alarm ${i + 1}',
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
+              Text('${tr('alarm')} ${i + 1}', style: const TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
               GestureDetector(
                 onTap: () async {
@@ -409,9 +554,7 @@ class _HomePageState extends State<HomePage> {
                     initialTime: TimeOfDay.now(),
                     builder: (context, child) {
                       return MediaQuery(
-                        data: MediaQuery.of(
-                          context,
-                        ).copyWith(alwaysUse24HourFormat: true),
+                        data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
                         child: child!,
                       );
                     },
@@ -423,16 +566,13 @@ class _HomePageState extends State<HomePage> {
                   }
                 },
                 child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 14,
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
                   decoration: BoxDecoration(
                     border: Border.all(color: Colors.grey),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    alarmTimes[i]?.format(context) ?? 'Saat seçin',
+                    alarmTimes[i]?.format(context) ?? tr('selectTime'),
                     style: const TextStyle(fontSize: 16),
                   ),
                 ),
@@ -440,20 +580,20 @@ class _HomePageState extends State<HomePage> {
               const SizedBox(height: 10),
               _buildDropdown(
                 value: diaperWetness[i],
-                label: 'Bez Islaklığı',
-                items: ['Az', 'Orta', 'Çok'],
+                label: tr('diaperWetness'),
+                items: [tr('less'), tr('medium'), tr('much')],
                 icon: Icons.invert_colors,
                 onChanged: (val) => setState(() => diaperWetness[i] = val!),
               ),
               const SizedBox(height: 10),
               _buildDropdown(
                 value: outsideUrine[i],
-                label: 'Tuvalette Sonlandırma Miktarı',
-                items: ['Az', 'Orta', 'Çok'],
+                label: tr('outsideUrine'),
+                items: [tr('less'), tr('medium'), tr('much')],
                 icon: Icons.bloodtype,
                 onChanged: (val) => setState(() => outsideUrine[i] = val!),
               ),
-              const Divider(thickness: 1.0),
+              const Divider(),
             ],
           ),
       ],
@@ -485,10 +625,18 @@ class _HomePageState extends State<HomePage> {
     required IconData icon,
     required void Function(String?) onChanged,
   }) {
+    // Boş bir seçenek başa ekleniyor
+    final List<DropdownMenuItem<String>> dropdownItems = [
+      DropdownMenuItem(
+        value: null,
+        child: Text(LanguageProvider.translate(context, 'pleaseSelect')), // örn. "Lütfen seçiniz"
+      ),
+      ...items.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+    ];
+
     return DropdownButtonFormField<String>(
       value: value,
-      items:
-          items.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+      items: dropdownItems,
       onChanged: onChanged,
       decoration: InputDecoration(
         labelText: label,
@@ -500,10 +648,11 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    final tr = (String key) => LanguageProvider.translate(context, key);
     return Scaffold(
       backgroundColor: Color(0xFFE3E4D6), // <-- Bu satırı ekle
       appBar: AppBar(
-        title: Text(widget.title),
+        title: Text(LanguageProvider.translate(context, 'pageTitle')),
         backgroundColor: Colors.teal,
         centerTitle: true,
       ),
@@ -532,12 +681,10 @@ class _HomePageState extends State<HomePage> {
                     child: ListTile(
                       leading: const Icon(Icons.person, color: Colors.teal),
                       title: Text(
-                        'İsim Soyisim: $savedName',
-                        style: const TextStyle(fontWeight: FontWeight.bold),
+                        '${LanguageProvider.translate(context, 'nameSurname')}: $savedName',
                       ),
                       subtitle: Text(
-                        'Gün: ${_formattedDate(DateTime.now())}',
-                        style: const TextStyle(fontSize: 14),
+                        '${LanguageProvider.translate(context, 'day')}: ${_formattedDate(DateTime.now())}',
                       ),
                     ),
                   ),
@@ -545,35 +692,35 @@ class _HomePageState extends State<HomePage> {
               _buildTimeTile(
                 context,
                 title: bedTime == null
-                    ? 'Gece yatma saati seçin'
-                    : 'Yatma Saati: ${bedTime!.format(context)}',
+                    ? LanguageProvider.translate(context, 'selectBedTime')
+                    : '${LanguageProvider.translate(context, 'bedTime')}: ${bedTime!.format(context)}',
                 icon: Icons.nightlight_round,
-                onTap: () => _pickTime(true),
+                onTap: () => _pickTime(context, true),
               ),
               const SizedBox(height: 20),
               _buildTimeTile(
                 context,
                 title: wakeTime == null
-                    ? 'Uyanma saati seçin'
-                    : 'Uyanma Saati: ${wakeTime!.format(context)}',
+                    ? LanguageProvider.translate(context, 'selectWakeTime')
+                    : '${LanguageProvider.translate(context, 'wakeTime')}: ${wakeTime!.format(context)}',
                 icon: Icons.wb_sunny,
-                onTap: () => _pickTime(false),
+                onTap: () => _pickTime(context, false),
               ),
               const SizedBox(height: 20),
-              _buildAlarmInput(),
+              _buildAlarmInput(context),
               const SizedBox(height: 20),
               _buildDropdown(
                 value: morningStatus,
-                label: 'Sabah Durumu',
-                items: ['Kuru', 'Az Islak', 'Çok Islak'],
+                label: tr('morningStatus'),
+                items: [tr('completelyDry'), tr('withAlarm'), tr('wet')],
                 icon: Icons.wb_cloudy,
                 onChanged: (val) => setState(() => morningStatus = val!),
               ),
               const SizedBox(height: 20),
               _buildDropdown(
                 value: moodStatus,
-                label: 'Ruh Hali',
-                items: ['Mutlu', 'Mutsuz', 'Normal'],
+                label: tr('mood'),
+                items: [tr('happy'), tr('unhappy'), tr('normal')],
                 icon: Icons.mood,
                 onChanged: (val) => setState(() => moodStatus = val!),
               ),
@@ -583,10 +730,7 @@ class _HomePageState extends State<HomePage> {
                 child: ElevatedButton.icon(
                   onPressed: _saveData,
                   icon: const Icon(Icons.save, color: Colors.white),
-                  label: const Text(
-                    'Kaydet',
-                    style: TextStyle(color: Colors.white),
-                  ),
+                  label: Text(LanguageProvider.translate(context, 'save'), style: TextStyle(color: Colors.white),),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.teal,
                     padding: const EdgeInsets.symmetric(vertical: 16),
@@ -609,10 +753,7 @@ class _HomePageState extends State<HomePage> {
                     );
                   },
                   icon: const Icon(Icons.description, color: Colors.white),
-                  label: const Text(
-                    'Rapor Oluştur',
-                    style: TextStyle(color: Colors.white),
-                  ),
+                  label: Text(LanguageProvider.translate(context, 'generateReport'), style: TextStyle(color: Colors.white),),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.deepOrange,
                     padding: const EdgeInsets.symmetric(vertical: 16),
@@ -628,6 +769,5 @@ class _HomePageState extends State<HomePage> {
         ),
       ),
     );
-
   }
 }

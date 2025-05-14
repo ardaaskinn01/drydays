@@ -32,10 +32,12 @@ dependencies:
   pdf: ^3.11.3
   path_provider: ^2.1.5
   share_plus: ^10.1.4
-  flutter_localization: ^0.3.2
   audioplayers: ^6.4.0
-  flutter_pdfview: ^1.4.0+1
-  syncfusion_flutter_pdf: ^29.1.39
+  syncfusion_flutter_pdfviewer: ^29.1.40
+  table_calendar: ^3.1.3
+  provider: ^6.1.5
+  open_filex: ^4.7.0
+
 
 dev_dependencies:
   flutter_test:
@@ -43,8 +45,6 @@ dev_dependencies:
 
   flutter_lints: ^5.0.0
 flutter:
-
-  generate: true
   uses-material-design: true
 
   assets:
@@ -62,9 +62,14 @@ flutter:
     - assets/alarms/5.mp3
     - assets/alarms/6.mp3
     - assets/images/pp.png
+    - assets/images/kilavuz.pdf
     - assets/fonts/DejaVuSans.ttf
-flutter_icons:
+
+
+flutter_launcher_icons:
   android: true
   ios: true
   image_path: "assets/images/pp.png"
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: "assets/images/pp.png"
 

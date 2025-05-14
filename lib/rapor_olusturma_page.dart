@@ -10,6 +10,8 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:path_provider/path_provider.dart';
 
+import 'language_provider.dart';
+
 class RaporOlusturmaPage extends StatefulWidget {
   const RaporOlusturmaPage({super.key});
 
@@ -51,41 +53,49 @@ class _RaporOlusturmaPageState extends State<RaporOlusturmaPage> {
     });
 
     // Firestore koleksiyonuna erişim
-    final querySnapshot = await FirebaseFirestore.instance
-        .collection(savedName!)
-        .get();
+    final querySnapshot =
+        await FirebaseFirestore.instance.collection(savedName!).get();
 
     setState(() {
       isLoading = false;
       if (querySnapshot.docs.isNotEmpty) {
-        documents = querySnapshot.docs.map((doc) {
-          var data = doc.data() as Map<String, dynamic>;
+        documents =
+            querySnapshot.docs
+                .map((doc) {
+                  var data = doc.data();
 
-          // 'createdAt' tarihini string olarak alıyoruz
-          if (data.containsKey('createdAt') && data['createdAt'] is String) {
-            final createdAtString = data['createdAt'] as String;
-            // Tarihi string formatından DateTime'a dönüştürme
-            final createdAt = DateFormat('dd.MM.yyyy').parse(createdAtString);
-            data['createdAt'] = createdAt;
-          }
+                  // 'createdAt' tarihini string olarak alıyoruz
+                  if (data.containsKey('createdAt') &&
+                      data['createdAt'] is String) {
+                    final createdAtString = data['createdAt'] as String;
+                    // Tarihi string formatından DateTime'a dönüştürme
+                    final createdAt = DateFormat(
+                      'dd.MM.yyyy',
+                    ).parse(createdAtString);
+                    data['createdAt'] = createdAt;
+                  }
 
-          // 'createdAt' tarihine göre filtreleme
-          if (data['createdAt'] is DateTime) {
-            final createdAt = data['createdAt'] as DateTime;
-            if (createdAt.year == selectedYear && createdAt.month == selectedMonth) {
-              return data;
-            }
-          }
+                  // 'createdAt' tarihine göre filtreleme
+                  if (data['createdAt'] is DateTime) {
+                    final createdAt = data['createdAt'] as DateTime;
+                    if (createdAt.year == selectedYear &&
+                        createdAt.month == selectedMonth) {
+                      return data;
+                    }
+                  }
 
-          return null; // Filtrelenmiş verileri döndür
-        }).whereType<Map<String, dynamic>>().toList(); // null değerleri dışla
+                  return null; // Filtrelenmiş verileri döndür
+                })
+                .whereType<Map<String, dynamic>>()
+                .toList(); // null değerleri dışla
       } else {
         documents = [];
       }
     });
   }
 
-  Future<void> _createPdf() async {
+  Future<void> _createPdf(BuildContext context) async {
+    final lang = LanguageProvider.translate;
     if (selectedYear == null || selectedMonth == null) return;
 
     setState(() {
@@ -96,18 +106,23 @@ class _RaporOlusturmaPageState extends State<RaporOlusturmaPage> {
     final ttf = await rootBundle.load("assets/fonts/DejaVuSans.ttf");
     final font = pw.Font.ttf(ttf);
 
-    final selectedDocs = documents.where((doc) {
-      var createdAt = doc['createdAt'];
-      if (createdAt is Timestamp) createdAt = createdAt.toDate();
-      if (createdAt is DateTime) {
-        return createdAt.year == selectedYear && createdAt.month == selectedMonth;
-      }
-      return false;
-    }).toList();
+    final selectedDocs =
+        documents.where((doc) {
+          var createdAt = doc['createdAt'];
+          if (createdAt is Timestamp) createdAt = createdAt.toDate();
+          if (createdAt is DateTime) {
+            return createdAt.year == selectedYear &&
+                createdAt.month == selectedMonth;
+          }
+          return false;
+        }).toList();
 
     for (var doc in selectedDocs) {
       final docDate = doc['createdAt'];
-      final formattedDate = docDate != null ? DateFormat('dd.MM.yyyy').format(docDate) : 'Veri Yok';
+      final formattedDate =
+          docDate != null
+              ? DateFormat('dd.MM.yyyy').format(docDate)
+              : 'Veri Yok';
 
       final bedTime = doc['bedTime'] ?? 'Veri Yok';
       final wakeTime = doc['wakeTime'] ?? 'Veri Yok';
@@ -115,70 +130,163 @@ class _RaporOlusturmaPageState extends State<RaporOlusturmaPage> {
       final moodStatus = doc['moodStatus'] ?? 'Veri Yok';
 
       final alarmCount = doc['alarmCount'] ?? 0;
-      final List<dynamic> alarmTimes = List<dynamic>.from(doc['alarmTimes'] ?? []);
-      final List<dynamic> diaperWetness = List<dynamic>.from(doc['diaperWetness'] ?? []);
-      final List<dynamic> outsideUrine = List<dynamic>.from(doc['outsideUrine'] ?? []);
+      final List<dynamic> alarmTimes = List<dynamic>.from(
+        doc['alarmTimes'] ?? [],
+      );
+      final List<dynamic> diaperWetness = List<dynamic>.from(
+        doc['diaperWetness'] ?? [],
+      );
+      final List<dynamic> outsideUrine = List<dynamic>.from(
+        doc['outsideUrine'] ?? [],
+      );
 
-      pdf.addPage(pw.Page(
-        build: (pw.Context context) {
-          return pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              pw.Text('Rapor Tarihi: $formattedDate', style: pw.TextStyle(font: font, fontSize: 24, fontWeight: pw.FontWeight.bold)),
-              pw.SizedBox(height: 40),
-
-              _buildInfo(font, 'Uyku Saati', bedTime),
-              _buildInfo(font, 'Uyanma Saati', wakeTime),
-              _buildInfo(font, 'Sabah Durumu', morningStatus),
-              _buildInfo(font, 'Ruh Hali', moodStatus),
-
-              pw.SizedBox(height: 25),
-              pw.Text('Alarm Detayları (Toplam $alarmCount adet)', style: pw.TextStyle(font: font, fontSize: 20, fontWeight: pw.FontWeight.bold)),
-              pw.SizedBox(height: 10),
-
-              pw.Table(
-                border: pw.TableBorder.all(),
-                columnWidths: {
-                  0: const pw.FlexColumnWidth(1),
-                  1: const pw.FlexColumnWidth(2),
-                  2: const pw.FlexColumnWidth(2),
-                  3: const pw.FlexColumnWidth(2),
-                },
-                children: [
-                  // Başlık satırı
-                  pw.TableRow(
-                    decoration: pw.BoxDecoration(color: PdfColors.grey300),
-                    children: [
-                      pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('No', style: pw.TextStyle(font: font, fontSize: 18, fontWeight: pw.FontWeight.bold))),
-                      pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('Alarm Saati', style: pw.TextStyle(font: font, fontSize: 18, fontWeight: pw.FontWeight.bold))),
-                      pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('Bez Islaklığı', style: pw.TextStyle(font: font, fontSize: 18, fontWeight: pw.FontWeight.bold))),
-                      pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('Tuvalette Sonlandırma', style: pw.TextStyle(font: font, fontSize: 18, fontWeight: pw.FontWeight.bold))),
-                    ],
+      pdf.addPage(
+        pw.Page(
+          build: (pw.Context _) {
+            return pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+            pw.Text('${lang(context, 'reportDate')}: $formattedDate',
+                  style: pw.TextStyle(
+                    font: font,
+                    fontSize: 24,
+                    fontWeight: pw.FontWeight.bold,
                   ),
+                ),
+                pw.SizedBox(height: 40),
 
-                  // Veriler
-                  for (int i = 0; i < alarmCount && i < 10; i++) // Maksimum 6 satır
+                _buildInfo(font, lang(context, 'sleepTime'), bedTime),
+                _buildInfo(font, lang(context, 'wakeTime'), wakeTime),
+                _buildInfo(font, lang(context, 'morningStatus'), morningStatus),
+                _buildInfo(font, lang(context, 'moodStatus'), moodStatus),
+
+                pw.SizedBox(height: 25),
+                pw.Text(lang(context, 'alarmDetails'),
+                  style: pw.TextStyle(
+                    font: font,
+                    fontSize: 20,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                ),
+                pw.SizedBox(height: 10),
+
+                pw.Table(
+                  border: pw.TableBorder.all(),
+                  columnWidths: {
+                    0: const pw.FlexColumnWidth(1),
+                    1: const pw.FlexColumnWidth(2),
+                    2: const pw.FlexColumnWidth(2),
+                    3: const pw.FlexColumnWidth(2),
+                  },
+                  children: [
+                    // Başlık satırı
                     pw.TableRow(
+                      decoration: pw.BoxDecoration(color: PdfColors.grey300),
                       children: [
-                        pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('${i + 1}', style: pw.TextStyle(font: font, fontSize: 18))),
-                        pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text(alarmTimes.length > i ? alarmTimes[i] ?? 'Veri Yok' : 'Veri Yok', style: pw.TextStyle(font: font, fontSize: 18))),
-                        pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text(diaperWetness.length > i ? diaperWetness[i] ?? 'Veri Yok' : 'Veri Yok', style: pw.TextStyle(font: font, fontSize: 18))),
-                        pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text(outsideUrine.length > i ? outsideUrine[i]?.toString() ?? 'Veri Yok' : 'Veri Yok', style: pw.TextStyle(font: font, fontSize: 18))),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.all(4),
+                          child: pw.Text(
+                            'No',
+                            style: pw.TextStyle(
+                              font: font,
+                              fontSize: 18,
+                              fontWeight: pw.FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.all(4),
+                          child: pw.Text(lang(context, 'alarmTime'),
+                            style: pw.TextStyle(
+                              font: font,
+                              fontSize: 18,
+                              fontWeight: pw.FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.all(4),
+                          child: pw.Text(lang(context, 'diaperWetness'),
+                            style: pw.TextStyle(
+                              font: font,
+                              fontSize: 18,
+                              fontWeight: pw.FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.all(4),
+                          child: pw.Text(lang(context, 'outsideUrine'),
+                            style: pw.TextStyle(
+                              font: font,
+                              fontSize: 18,
+                              fontWeight: pw.FontWeight.bold,
+                            ),
+                          ),
+                        ),
                       ],
                     ),
-                ],
-              ),
-            ],
-          );
-        },
-      ));
+
+                    // Veriler
+                    for (
+                      int i = 0;
+                      i < alarmCount && i < 10;
+                      i++
+                    ) // Maksimum 6 satır
+                      pw.TableRow(
+                        children: [
+                          pw.Padding(
+                            padding: const pw.EdgeInsets.all(4),
+                            child: pw.Text(
+                              '${i + 1}',
+                              style: pw.TextStyle(font: font, fontSize: 18),
+                            ),
+                          ),
+                          pw.Padding(
+                            padding: const pw.EdgeInsets.all(4),
+                            child: pw.Text(
+                              alarmTimes.length > i
+                                  ? alarmTimes[i] ?? 'Veri Yok'
+                                  : 'Veri Yok',
+                              style: pw.TextStyle(font: font, fontSize: 18),
+                            ),
+                          ),
+                          pw.Padding(
+                            padding: const pw.EdgeInsets.all(4),
+                            child: pw.Text(
+                              diaperWetness.length > i
+                                  ? diaperWetness[i] ?? 'Veri Yok'
+                                  : 'Veri Yok',
+                              style: pw.TextStyle(font: font, fontSize: 18),
+                            ),
+                          ),
+                          pw.Padding(
+                            padding: const pw.EdgeInsets.all(4),
+                            child: pw.Text(
+                              outsideUrine.length > i
+                                  ? outsideUrine[i]?.toString() ?? 'Veri Yok'
+                                  : 'Veri Yok',
+                              style: pw.TextStyle(font: font, fontSize: 18),
+                            ),
+                          ),
+                        ],
+                      ),
+                  ],
+                ),
+              ],
+            );
+          },
+        ),
+      );
     }
 
     final output = await getApplicationDocumentsDirectory();
-    final file = File('${output.path}/drydays_${selectedMonth}_${selectedYear}.pdf');
+    final file = File(
+      '${output.path}/drydays_${selectedMonth}_${selectedYear}.pdf',
+    );
     await file.writeAsBytes(await pdf.save());
 
-// Dosyanın varlığını kontrol edin
+    // Dosyanın varlığını kontrol edin
     if (await file.exists()) {
       print("PDF başarıyla oluşturuldu: ${file.path}");
       setState(() {
@@ -197,16 +305,24 @@ class _RaporOlusturmaPageState extends State<RaporOlusturmaPage> {
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
-        pw.Text('$label:', style: pw.TextStyle(font: font, fontSize: 18, fontWeight: pw.FontWeight.bold)),
+        pw.Text(
+          '$label:',
+          style: pw.TextStyle(
+            font: font,
+            fontSize: 18,
+            fontWeight: pw.FontWeight.bold,
+          ),
+        ),
         pw.Text(value, style: pw.TextStyle(font: font, fontSize: 18)),
         pw.SizedBox(height: 10),
       ],
     );
   }
 
-  void _sharePdf(File file) {
+  void _sharePdf(BuildContext context, File file) {
     final xFile = XFile(file.path);
-    Share.shareXFiles([xFile], text: 'Raporu Paylaş');
+    final shareText = LanguageProvider.translate(context, 'shareReport');
+    Share.shareXFiles([xFile], text: shareText);
   }
 
   List<int> getYearsList() {
@@ -231,7 +347,20 @@ class _RaporOlusturmaPageState extends State<RaporOlusturmaPage> {
 
   List<int> getMonthsList(int year) {
     Set<int> months = Set();
-    months.addAll([01, 02, 03, 04, 05, 06, 07, 08, 09, 10, 11, 12]); // Ayları sıfırdan başlamayan şekilde ekliyoruz
+    months.addAll([
+      01,
+      02,
+      03,
+      04,
+      05,
+      06,
+      07,
+      08,
+      09,
+      10,
+      11,
+      12,
+    ]); // Ayları sıfırdan başlamayan şekilde ekliyoruz
 
     for (var document in documents) {
       var createdAt = document['createdAt'];
@@ -260,10 +389,15 @@ class _RaporOlusturmaPageState extends State<RaporOlusturmaPage> {
     if (selectedYear == null || selectedMonth == null) return;
 
     setState(() {
-      selectedDocuments = documents.where((doc) {
-        final createdAt = (doc['createdAt'] as Timestamp).toDate();
-        return createdAt.year == selectedYear && createdAt.month == selectedMonth;
-      }).map((doc) => doc['createdAt'].toDate().toString()).toList();
+      selectedDocuments =
+          documents
+              .where((doc) {
+                final createdAt = (doc['createdAt'] as Timestamp).toDate();
+                return createdAt.year == selectedYear &&
+                    createdAt.month == selectedMonth;
+              })
+              .map((doc) => doc['createdAt'].toDate().toString())
+              .toList();
     });
   }
 
@@ -271,7 +405,7 @@ class _RaporOlusturmaPageState extends State<RaporOlusturmaPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Rapor Oluşturma'),
+        title: Text(LanguageProvider.translate(context, 'generateReport')),
         backgroundColor: Colors.green,
         elevation: 4,
       ),
@@ -298,16 +432,26 @@ class _RaporOlusturmaPageState extends State<RaporOlusturmaPage> {
                         ),
                       ],
                     ),
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16.0,
+                      vertical: 8.0,
+                    ),
                     child: DropdownButton<int>(
-                      hint: Text('Yıl Seçin', style: TextStyle(color: Colors.green[700])),
+                      hint: Text(
+                        LanguageProvider.translate(context, 'selectYear'),
+                        style: TextStyle(color: Colors.green[700]),
+                      ),
                       value: selectedYear,
-                      items: getYearsList().map((year) {
-                        return DropdownMenuItem<int>(
-                          value: year,
-                          child: Text('$year', style: TextStyle(color: Colors.green[800])),
-                        );
-                      }).toList(),
+                      items:
+                          getYearsList().map((year) {
+                            return DropdownMenuItem<int>(
+                              value: year,
+                              child: Text(
+                                '$year',
+                                style: TextStyle(color: Colors.green[800]),
+                              ),
+                            );
+                          }).toList(),
                       onChanged: (year) {
                         setState(() {
                           selectedYear = year;
@@ -332,19 +476,28 @@ class _RaporOlusturmaPageState extends State<RaporOlusturmaPage> {
                           ),
                         ],
                       ),
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16.0,
+                        vertical: 8.0,
+                      ),
                       child: DropdownButton<int>(
-                        hint: Text('Ay Seçin', style: TextStyle(color: Colors.green[700])),
+                        hint: Text(
+                          LanguageProvider.translate(context, 'selectMonth'),
+                          style: TextStyle(color: Colors.green[700]),
+                        ),
                         value: selectedMonth,
-                        items: getMonthsList(selectedYear!).map((month) {
-                          return DropdownMenuItem<int>(
-                            value: month,
-                            child: Text(
-                              DateFormat.MMMM('tr_TR').format(DateTime(0, month)),
-                              style: TextStyle(color: Colors.green[800]),
-                            ),
-                          );
-                        }).toList(),
+                        items:
+                            getMonthsList(selectedYear!).map((month) {
+                              return DropdownMenuItem<int>(
+                                value: month,
+                                child: Text(
+                                  DateFormat.MMMM(
+                                    'tr_TR',
+                                  ).format(DateTime(0, month)),
+                                  style: TextStyle(color: Colors.green[800]),
+                                ),
+                              );
+                            }).toList(),
                         onChanged: (month) {
                           setState(() {
                             selectedMonth = month;
@@ -357,25 +510,38 @@ class _RaporOlusturmaPageState extends State<RaporOlusturmaPage> {
                 ],
                 if (selectedYear != null && selectedMonth != null) ...[
                   Text(
-                    'Seçilen Yıl: $selectedYear, Ay: ${DateFormat.MMMM('tr_TR').format(DateTime(0, selectedMonth!))}',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.green[700]),
+                    '${LanguageProvider.translate(context, 'selectedYear')}: $selectedYear, ${LanguageProvider.translate(context, 'month')}: ${DateFormat.MMMM('tr_TR').format(DateTime(0, selectedMonth!))}',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.green[700],
+                    ),
                   ),
                   const SizedBox(height: 20),
                 ],
                 ElevatedButton(
                   onPressed: () async {
                     await _fetchDocuments(); // Veriler tamamen geldikten sonra
-                    await _createPdf();      // PDF oluştur
+                    await _createPdf(context); // PDF oluştur
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.green,
-                    padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 40,
+                      vertical: 12,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30),
+                    ),
                     elevation: 5,
                   ),
                   child: Text(
-                    'Rapor Oluştur',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                    LanguageProvider.translate(context, 'createReport'),
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -392,42 +558,62 @@ class _RaporOlusturmaPageState extends State<RaporOlusturmaPage> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => PdfPreviewScreen(pdfFile: pdfFile!),
+                            builder:
+                                (context) =>
+                                    PdfPreviewScreen(pdfFile: pdfFile!),
                           ),
                         );
                       } else {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text("PDF oluşturulamadı!")),
+                          SnackBar(content: Text(LanguageProvider.translate(context, 'pdfNotGenerated'))),
                         );
                       }
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.blue,
-                      padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 40,
+                        vertical: 12,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30),
+                      ),
                       elevation: 5,
                     ),
                     child: Text(
-                      'PDF\'i İncele',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                      LanguageProvider.translate(context, 'viewPdf'),
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 20),
                   ElevatedButton(
                     onPressed: () {
                       if (pdfFile != null) {
-                        _sharePdf(pdfFile!);
+                        _sharePdf(context, pdfFile!);
                       }
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.orange,
-                      padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 40,
+                        vertical: 12,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30),
+                      ),
                       elevation: 5,
                     ),
                     child: Text(
-                      'Raporu Paylaş',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                      LanguageProvider.translate(context, 'shareReport'),
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
                 ],

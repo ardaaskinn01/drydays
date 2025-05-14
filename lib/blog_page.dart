@@ -1,137 +1,164 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'home_page.dart';
+import 'language_provider.dart';
 
 class BlogPage extends StatelessWidget {
   const BlogPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text("Blog")),
-      drawer: HomePage(title: 'Dry Days Blog').buildDrawer(context),
-      body: Container(
-        padding: const EdgeInsets.all(16.0),
-        decoration: const BoxDecoration(
-          color: Color(0xFFD5CE9D), // Açık mavi arka plan rengi
-        ),
-        child: ListView(
-          padding: const EdgeInsets.all(16.0),
-          children: [
-            // İlk Blog Kartı
-            Card(
-              elevation: 5,
-              margin: const EdgeInsets.symmetric(vertical: 8),
-              child: InkWell(
-                onTap: () {
-                  // İlk kart tıklama işleminde yeni sayfaya yönlendir
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const BlogDetailPage1(),
-                    ),
-                  );
-                },
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        "Cerrah Gözüyle Enzürezis",
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
+    return Consumer<LanguageProvider>(
+      builder: (context, languageProvider, child) {
+        return Scaffold(
+          appBar: AppBar(
+            title: Text(LanguageProvider.translate(context, 'blogTitle')),
+          ),
+          drawer: HomePage(title: LanguageProvider.translate(context, 'blogTitle')).buildDrawer(context),
+          body: Container(
+            padding: const EdgeInsets.all(16.0),
+            decoration: const BoxDecoration(
+              color: Color(0xFFD5CE9D),
+            ),
+            child: ListView(
+              padding: const EdgeInsets.all(16.0),
+              children: [
+                // Blog Kartı 1
+                Card(
+                  elevation: 5,
+                  margin: const EdgeInsets.symmetric(vertical: 8),
+                  child: InkWell(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const BlogDetailPage1(),
                         ),
-                      ),
-                      const SizedBox(height: 10),
-                      const Text(
-                        "9 Eylül 2018",
-                        style: TextStyle(fontSize: 16, color: Colors.grey),
-                      ),
-                      const SizedBox(height: 10),
-
-                      // Etiketler
-                      Wrap(
-                        spacing: 8.0,
-                        children: const [
-                          Chip(label: Text("distal üreteral stenoz")),
-                          Chip(label: Text("epidemiyoloji")),
-                          Chip(label: Text("etiyoloji")),
-                          Chip(label: Text("hinman sendromu")),
-                          Chip(label: Text("tembel mesane")),
+                      );
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            LanguageProvider.translate(context, 'blog1Title'),
+                            style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          Text(
+                            LanguageProvider.translate(context, 'blog1Date'),
+                            style: const TextStyle(fontSize: 16, color: Colors.grey),
+                          ),
+                          const SizedBox(height: 10),
+                          Wrap(
+                            spacing: 8.0,
+                            children: [
+                              Chip(label: Text(LanguageProvider.translate(context, 'tag1'))),
+                              Chip(label: Text(LanguageProvider.translate(context,'tag2'))),
+                              Chip(label: Text(LanguageProvider.translate(context,'tag3'))),
+                              Chip(label: Text(LanguageProvider.translate(context,'tag4'))),
+                              Chip(label: Text(LanguageProvider.translate(context,'tag5'))),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          Text(
+                            LanguageProvider.translate(context, 'blog1Summary'),
+                            maxLines: 3,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 16),
+                          ),
                         ],
                       ),
-
-                      const SizedBox(height: 10),
-                      const Text(
-                        "Enürezis çocukluk çağının en önemli ve en sık görülen işeme bozukluğudur. Uyku sırasında mesanenin fonksiyonel kapasitesi dolduğunda ortaya çıkan kendini boşaltma ihtiyacı çocuk uyanır ve gece tuvalete işerse (nokturi), uyanamaz ve yatağına işerse (enürezis) olarak adlandırılır.",
-                        maxLines: 3, // Yazı sadece 3 satır gösterilecek
-                        overflow: TextOverflow.ellipsis, // Fazla yazıyı keser
-                        style: TextStyle(fontSize: 16),
-                      ),
-                    ],
+                    ),
                   ),
                 ),
-              ),
-            ),
 
-            // İkinci Blog Kartı
-            Card(
-              elevation: 5,
-              margin: const EdgeInsets.symmetric(vertical: 8),
-              child: InkWell(
-                onTap: () {
-                  // İkinci kart tıklama işleminde yeni sayfaya yönlendir
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const BlogDetailPage2(),
-                    ),
-                  );
-                },
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        "Enürezis Nokturna (Uykuda İşeme) ve Enürezis Alarm",
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
+                Card(
+                  elevation: 5,
+                  margin: const EdgeInsets.symmetric(vertical: 8),
+                  child: InkWell(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const BlogDetailPage2(),
                         ),
-                      ),
-                      const SizedBox(height: 10),
-                      const Text(
-                        "9 Eylül 2018",
-                        style: TextStyle(fontSize: 16, color: Colors.grey),
-                      ),
-                      const SizedBox(height: 10),
-
-                      // Etiketler
-                      Wrap(
-                        spacing: 8.0,
-                        children: const [
-                          Chip(label: Text("enürezis")),
-                          Chip(label: Text("uykuda işeme")),
+                      );
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            LanguageProvider.translate(context, 'enuresisTitle'),
+                            style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          const Text(
+                            "9 Eylül 2018", // tarih sabit kalabilir ya da çevrilmesi gerekiyorsa ayrıca yönetilir
+                            style: TextStyle(fontSize: 16, color: Colors.grey),
+                          ),
+                          const SizedBox(height: 10),
+                          Wrap(
+                            spacing: 8.0,
+                            children: [
+                              Chip(label: Text(LanguageProvider.translate(context, 'tagEnuresis'))),
+                              Chip(label: Text(LanguageProvider.translate(context, 'tagBedwetting'))),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          Text(
+                            LanguageProvider.translate(context, 'enuresisSummary'),
+                            maxLines: 3,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 16),
+                          ),
                         ],
                       ),
-
-                      const SizedBox(height: 10),
-                      const Text(
-                        "Genelenürezis, uykuda işeme. Enürezis nokturna (uykuda işeme) günümüzde sağlıklı okul çocuklarının %15-30’unu etkileyebilen ve çoğunlukla monosemptomatik tipte (sadece gece işemeleri şeklinde) seyreden bir rahatsızlıktır. Gece işemesi bilimsel olarak, 5 yaşından sonra –haftada 2 defadan fazla olmak üzere- mesanenin yalnış yer ve zamanda...",
-                        maxLines: 3, // Yazı sadece 3 satır gösterilecek
-                        overflow: TextOverflow.ellipsis, // Fazla yazıyı keser
-                        style: TextStyle(fontSize: 16),
-                      ),
-                    ],
+                    ),
                   ),
                 ),
-              ),
+
+                const SizedBox(height: 20),
+                Text(
+                  LanguageProvider.translate(context, 'otherInfo'),
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                InkWell(
+                  onTap: () {
+                    launchUrl(
+                      Uri.parse("https://www.cocukuroloji.com/gece-idrar-kacirma"),
+                      mode: LaunchMode.externalApplication,
+                    );
+                  },
+                  child: const Text(
+                    "www.cocukuroloji.com",
+                    style: TextStyle(
+                      color: Colors.blue,
+                      decoration: TextDecoration.underline,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }

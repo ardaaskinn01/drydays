@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:provider/provider.dart';
 import 'home_page.dart';
+import 'language_provider.dart';
 
 class ProductsPage extends StatelessWidget {
   const ProductsPage({super.key});
@@ -12,16 +14,16 @@ class ProductsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Ürünlerimiz"),
+        title: Text(LanguageProvider.translate(context, 'ourProducts')),
         actions: [
           IconButton(
             icon: Image.asset('assets/images/trendyol_logo.png'),
-            tooltip: "Trendyol'da Görüntüle",
+            tooltip: LanguageProvider.translate(context, 'viewOnTrendyol'),
             onPressed: () => _launchURL(),
           ),
         ],
       ),
-      drawer: HomePage(title: 'Ürünlerimiz').buildDrawer(context),
+      drawer: HomePage(title: LanguageProvider.translate(context, 'ourProducts')).buildDrawer(context),
       body: Container(
         padding: const EdgeInsets.all(16.0),
         decoration: const BoxDecoration(color: Color(0xFFD5CE9D)),
@@ -29,27 +31,24 @@ class ProductsPage extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Ürünlerimiz',
-                style: TextStyle(
+              Text(
+                LanguageProvider.translate(context, 'ourProducts'),
+                style: const TextStyle(
                   fontSize: 30,
                   fontWeight: FontWeight.bold,
                   color: Colors.black,
                 ),
               ),
               const SizedBox(height: 20),
-              const Text(
-                "Dry Days Enürezis Alarmlarımızın ölçüleri: Uzunluk 6 cm, Genişlik 4,5 cm, Derinlik 3 cm’dir. Ürünlerimiz; kişinin en kısa sürede uyarılması için ve her yaşta enüretik hastanın güvenle kullanması için tasarlanmıştır.\n\n"
-                    "Dry Days adıyla başarıyla üretmekte olduğumuz cihazımız birçok ilimizin üniversite ve hastanelerinde, değerli hekimlerimiz tarafından güvenle tavsiye edilip, reçetelendirilmektedir.",
-                style: TextStyle(fontSize: 16, color: Colors.black),
+              Text(
+                LanguageProvider.translate(context, 'productDescription'),
+                style: const TextStyle(fontSize: 16, color: Colors.black),
               ),
               const SizedBox(height: 20),
-              _buildProductCard('assets/images/product.png', 'Dry Days Sesli Uyarı'),
-              _buildProductCard('assets/images/product2.png', 'Dry Days Titreşimli Uyarı'),
-              _buildProductCard('assets/images/product3.png', 'Dry Days Plus (Sesli+Titreşimli)'),
+              _buildProductCard(context, 'assets/images/product.png', 'dryDaysSound'),
+              _buildProductCard(context, 'assets/images/product2.png', 'dryDaysVibration'),
+              _buildProductCard(context, 'assets/images/product3.png', 'dryDaysPlus'),
               const SizedBox(height: 30),
-
-              // Trendyol Butonu
               Center(
                 child: ElevatedButton.icon(
                   onPressed: () => _launchURL(),
@@ -65,9 +64,9 @@ class ProductsPage extends StatelessWidget {
                     width: 24,
                     height: 24,
                   ),
-                  label: const Text(
-                    "Trendyol'da Satın Al",
-                    style: TextStyle(fontSize: 16, color: Colors.white),
+                  label: Text(
+                    LanguageProvider.translate(context, 'buyOnTrendyol'),
+                    style: const TextStyle(fontSize: 16, color: Colors.white),
                   ),
                 ),
               ),
@@ -79,7 +78,7 @@ class ProductsPage extends StatelessWidget {
     );
   }
 
-  Widget _buildProductCard(String imagePath, String productName) {
+  Widget _buildProductCard(BuildContext context, String imagePath, String productKey) {
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
       elevation: 5,
@@ -99,7 +98,7 @@ class ProductsPage extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             Text(
-              productName,
+              LanguageProvider.translate(context, productKey),
               style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
