@@ -41,17 +41,17 @@
         <string>UIInterfaceOrientationLandscapeLeft</string>
         <string>UIInterfaceOrientationLandscapeRight</string>
     </array>
+    <key>CADisableMinimumFrameDurationOnPhone</key>
+    <true/>
+    <key>UIApplicationSupportsIndirectInputEvents</key>
+    <true/>
+    <key>NSUserNotificationUsageDescription</key>
+    <string>Bildirim gönderebilmek için izin gereklidir.</string>
+
 
     <!-- Firebase Configuration -->
     <key>FirebaseAppDelegateProxyEnabled</key>
     <true/>
-
-    <!-- flutter_local_notifications: Bildirim İzinleri -->
-    <key>UIBackgroundModes</key>
-    <array>
-        <string>fetch</string>
-        <string>remote-notification</string>
-    </array>
 
     <!-- open_filex: Dosya Erişim İzni -->
     <key>LSSupportsOpeningDocumentsInPlace</key>
