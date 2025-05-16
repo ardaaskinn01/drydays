@@ -17,11 +17,11 @@
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>2.1.4</string>
+    <string>2.1.5</string>
     <key>CFBundleSignature</key>
     <string>????</string>
     <key>CFBundleVersion</key>
-    <string>15</string>
+    <string>16</string>
     <key>LSRequiresIPhoneOS</key>
     <true/>
     <key>UILaunchStoryboardName</key>
@@ -41,9 +41,35 @@
         <string>UIInterfaceOrientationLandscapeLeft</string>
         <string>UIInterfaceOrientationLandscapeRight</string>
     </array>
-    <key>CADisableMinimumFrameDurationOnPhone</key>
+
+    <!-- Firebase Configuration -->
+    <key>FirebaseAppDelegateProxyEnabled</key>
     <true/>
-    <key>UIApplicationSupportsIndirectInputEvents</key>
+
+    <!-- flutter_local_notifications: Bildirim İzinleri -->
+    <key>UIBackgroundModes</key>
+    <array>
+        <string>fetch</string>
+        <string>remote-notification</string>
+    </array>
+
+    <!-- open_filex: Dosya Erişim İzni -->
+    <key>LSSupportsOpeningDocumentsInPlace</key>
     <true/>
+    <key>UIFileSharingEnabled</key>
+    <true/>
+
+    <!-- permission_handler: İzin Açıklamaları -->
+    <key>NSPhotoLibraryUsageDescription</key>
+    <string>Dosya açmak için fotoğraf kütüphanesine erişim gerekiyor.</string>
+    <key>NSPhotoLibraryAddUsageDescription</key>
+    <string>Dosyaları kaydetmek için fotoğraf kütüphanesine erişim gerekiyor.</string>
+
+    <!-- App Transport Security (ATS) -->
+    <key>NSAppTransportSecurity</key>
+    <dict>
+        <key>NSAllowsArbitraryLoads</key>
+        <true/>
+    </dict>
 </dict>
 </plist>

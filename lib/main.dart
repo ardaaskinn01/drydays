@@ -10,7 +10,6 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:wakelock_plus/wakelock_plus.dart';
 import 'firebase_options.dart';
 import 'home_page.dart';
 import 'language_provider.dart';
@@ -55,12 +54,6 @@ void main() async {
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
-
-   Future<void> requestNotificationPermission() async {
-    if (await Permission.notification.request().isGranted) {
-      print("Bildirim izni verildi");
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
