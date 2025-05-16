@@ -17,11 +17,11 @@
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>2.1.8</string>
+    <string>2.1.9</string>
     <key>CFBundleSignature</key>
     <string>????</string>
     <key>CFBundleVersion</key>
-    <string>19</string>
+    <string>20</string>
     <key>LSRequiresIPhoneOS</key>
     <true/>
     <key>UILaunchStoryboardName</key>
@@ -49,9 +49,10 @@
     <string>Bildirim gönderebilmek için izin gereklidir.</string>
 
 
-    <!-- Firebase Configuration -->
     <key>FirebaseAppDelegateProxyEnabled</key>
     <true/>
+    <key>GoogleService-Info</key>
+    <string>GoogleService-Info.plist</string>
 
     <!-- open_filex: Dosya Erişim İzni -->
     <key>LSSupportsOpeningDocumentsInPlace</key>
