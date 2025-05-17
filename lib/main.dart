@@ -32,10 +32,6 @@ void main() async {
 
   await flutterLocalNotificationsPlugin.initialize(
     initializationSettings,
-  );
-
-  flutterLocalNotificationsPlugin.initialize(
-    initializationSettings,
     onDidReceiveNotificationResponse: (NotificationResponse response) {
       final filePath = response.payload;
       if (filePath != null) {
