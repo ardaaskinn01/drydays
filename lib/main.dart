@@ -2,7 +2,7 @@ import 'dart:io';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+// import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -14,7 +14,7 @@ import 'firebase_options.dart';
 import 'home_page.dart';
 import 'language_provider.dart';
 
-final flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+// final flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,8 +23,10 @@ void main() async {
   );
   await initializeDateFormatting('tr_TR', null);
 
+  /*
+  // Bildirim ayarları
   const AndroidInitializationSettings initializationSettingsAndroid =
-  AndroidInitializationSettings('@mipmap/ic_launcher');
+      AndroidInitializationSettings('@mipmap/ic_launcher');
 
   const InitializationSettings initializationSettings = InitializationSettings(
     android: initializationSettingsAndroid,
@@ -39,6 +41,7 @@ void main() async {
       }
     },
   );
+  */
 
   runApp(
     ChangeNotifierProvider(
@@ -106,13 +109,12 @@ class _SplashScreenState extends State<SplashScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Image.asset(
-                  'assets/images/drydays.png',
-                  width: MediaQuery.of(context).size.width
+                'assets/images/drydays.png',
+                width: MediaQuery.of(context).size.width,
               ),
               const SizedBox(height: 40),
-              // Dil desteği ekliyoruz
               Text(
-                LanguageProvider.translate(context, 'loadingApp'), // 'loadingApp' anahtarıyla dil desteği
+                LanguageProvider.translate(context, 'loadingApp'),
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 22,

@@ -1,11 +1,10 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+// import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:open_filex/open_filex.dart';
 import 'language_provider.dart';
-import 'main.dart';
 
 class HowToUsePage extends StatelessWidget {
   const HowToUsePage({super.key});
@@ -25,8 +24,12 @@ class HowToUsePage extends StatelessWidget {
         final file = File('${downloadDir.path}/kilavuz.pdf');
         await file.writeAsBytes(byteData.buffer.asUint8List());
 
-        // Bildirim Gönder
-        _showDownloadNotification(context, file.path);
+        // Bildirim Gönderme Kısmı Kaldırıldı
+        // _showDownloadNotification(context, file.path);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(LanguageProvider.translate(context, 'download_success'))),
+        );
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(LanguageProvider.translate(context, 'download_failure'))),
@@ -39,6 +42,7 @@ class HowToUsePage extends StatelessWidget {
     }
   }
 
+  /*
   void _showDownloadNotification(BuildContext context, String filePath) async {
     const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
       'download_channel',
@@ -59,6 +63,7 @@ class HowToUsePage extends StatelessWidget {
       payload: filePath,
     );
   }
+  */
 
   @override
   Widget build(BuildContext context) {
